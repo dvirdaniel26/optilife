@@ -1,8 +1,8 @@
 export default function TestAnalysisPage() {
   return (
-    <main className="pr-72 pt-20 min-h-screen">
+    <main className="md:pr-72 pt-20 min-h-screen transition-all">
       <div className="p-xl max-w-4xl mx-auto">
-        <div className="mb-xl flex justify-between items-end">
+        <div className="mb-xl flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div>
             <h2 className="font-heading text-h1 text-primary mb-xs">שלום מאיה, בואי ננתח את הבדיקות שלך</h2>
             <p className="font-body text-body-lg text-on-surface-variant">העלי את תוצאות המעבדה שלך וקבלי תובנות בריאותיות מיידיות.</p>

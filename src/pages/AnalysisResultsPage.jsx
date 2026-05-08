@@ -1,6 +1,6 @@
 export default function AnalysisResultsPage() {
   return (
-    <main className="pr-72 pt-24 min-h-screen">
+    <main className="md:pr-72 pt-24 min-h-screen transition-all">
       <div className="p-xl max-w-6xl mx-auto space-y-lg">
         <div className="bg-white p-xl rounded-xl custom-shadow border border-white">
           <div className="flex items-center gap-sm mb-md">

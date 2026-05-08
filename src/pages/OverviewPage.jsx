@@ -1,6 +1,6 @@
 export default function OverviewPage() {
   return (
-    <main className="pr-72 pt-24 min-h-screen">
+    <main className="md:pr-72 pt-24 min-h-screen transition-all">
       <div className="p-xl max-w-6xl mx-auto">
         <div className="mb-xl">
           <h2 className="font-heading text-3xl text-primary mb-xs">המדדים שלך, מאיה</h2>

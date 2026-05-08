@@ -1,16 +1,21 @@
 import { Link, useLocation } from 'react-router-dom';
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen, closeSidebar }) {
   const location = useLocation();
   const currentPath = location.pathname;
 
   const isActive = (path) => currentPath === path;
 
   return (
-    <aside className="h-screen w-72 fixed right-0 top-0 z-40 bg-white custom-shadow flex flex-col py-xl space-y-xs">
-      <div className="px-xl mb-xl">
-        <h1 className="text-2xl font-bold text-primary tracking-tight">OptiLife</h1>
-        <p className="text-xs uppercase tracking-widest text-secondary font-bold">Wellness Hub</p>
+    <aside className={`h-screen w-72 fixed right-0 top-0 z-40 bg-white custom-shadow flex flex-col py-xl space-y-xs transition-transform duration-300 md:translate-x-0 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+      <div className="px-xl mb-xl flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-primary tracking-tight">OptiLife</h1>
+          <p className="text-xs uppercase tracking-widest text-secondary font-bold">Wellness Hub</p>
+        </div>
+        <button className="md:hidden text-primary" onClick={closeSidebar}>
+          <span className="material-symbols-outlined">close</span>
+        </button>
       </div>
       <nav className="flex-1 space-y-xs">
         <Link 

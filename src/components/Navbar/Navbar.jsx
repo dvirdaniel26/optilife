@@ -1,17 +1,20 @@
-export default function Header() {
+export default function Navbar({ toggleSidebar }) {
   return (
-    <header className="h-20 w-full fixed top-0 left-0 z-30 bg-background/80 backdrop-blur-md flex justify-between items-center pr-80 pl-xl">
+    <header className="h-20 w-full fixed top-0 left-0 z-30 bg-background/80 backdrop-blur-md flex justify-between items-center md:pr-80 px-md md:px-xl transition-all">
       <div className="flex items-center gap-md flex-1">
-        <div className="relative w-full max-w-md">
+        <button className="md:hidden text-primary" onClick={toggleSidebar}>
+          <span className="material-symbols-outlined text-2xl">menu</span>
+        </button>
+        <div className="relative w-full max-w-md hidden sm:block">
           <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
           <input className="w-full bg-white border-transparent custom-shadow rounded-xl pr-10 pl-md py-xs text-sm focus:ring-2 focus:ring-secondary/20 focus:border-secondary" placeholder="חיפוש בדיקות קודמות..." type="text"/>
         </div>
       </div>
-      <div className="flex items-center gap-md">
+      <div className="flex items-center gap-sm md:gap-md">
         <button className="material-symbols-outlined text-on-surface-variant hover:text-secondary transition-colors">notifications</button>
-        <div className="h-8 w-[1px] bg-outline-variant mx-xs"></div>
+        <div className="h-8 w-[1px] bg-outline-variant mx-xs hidden sm:block"></div>
         <div className="flex items-center gap-sm">
-          <div className="text-left">
+          <div className="text-left hidden sm:block">
             <p className="text-sm font-bold text-primary">מאיה כהן</p>
             <p className="text-[10px] text-secondary font-medium uppercase tracking-wider">משתמשת Premium</p>
           </div>

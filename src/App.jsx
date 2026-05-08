@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Sidebar from './components/Sidebar';
-import Header from './components/Header';
-import Footer from './components/Footer';
+import Sidebar from './components/Sidebar/Sidebar';
+import Navbar from './components/Navbar/Navbar';
+import Footer from './components/Footer/Footer';
 
 import OverviewPage from './pages/OverviewPage';
 import TestAnalysisPage from './pages/TestAnalysisPage';
@@ -11,7 +11,7 @@ function Layout({ children }) {
   return (
     <div className="text-on-surface bg-background min-h-screen font-body" dir="rtl">
       <Sidebar />
-      <Header />
+      <Navbar />
       {children}
       <Footer />
     </div>

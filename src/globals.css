@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #1E1E2D;
+  --color-secondary: #00A8B5;
+  --color-accent-action: #FDE047;
+  --color-background: #FDFBF7;
+  --color-surface: #FFFFFF;
+  --color-on-surface: #1E1E2D;
+  --color-on-surface-variant: #47464c;
+  --color-status-success: #10B981;
+  --color-status-error: #EF4444;
+  --color-outline: #78767d;
+  --color-outline-variant: #c8c5cc;
+
+  --radius-lg: 8px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  --spacing-xs: 8px;
+  --spacing-sm: 16px;
+  --spacing-md: 24px;
+  --spacing-lg: 32px;
+  --spacing-xl: 40px;
+  --spacing-gutter: 24px;
+
+  --font-heading: "Assistant", sans-serif;
+  --font-body: "Heebo", sans-serif;
+
+  --font-size-h1: 32px;
+  --font-size-body-lg: 18px;
+  --font-size-label-md: 14px;
+}
+
+body {
+  background-color: var(--color-background);
+  font-family: var(--font-body);
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-heading);
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.custom-shadow {
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+}
+
+.upload-dashed-border {
+  background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/1999/xlink'%3e%3crect width='100%25' height='100%25' fill='none' rx='16' ry='16' stroke='%2300A8B5FF' stroke-width='2' stroke-dasharray='8%2c 12' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
+  border-radius: 16px;
+}

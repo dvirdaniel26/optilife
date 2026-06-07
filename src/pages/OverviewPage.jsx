@@ -266,7 +266,6 @@ export default function OverviewPage() {
       message: `גובה: ${inputHeight} ס"מ, משקל: ${inputWeight} ק"ג. ה-BMI המעודכן שלך הוא ${calculatedBmi}.`,
       link: '/dashboard'
     });
-
     setShowMetricsModal(false);
   };
 
@@ -287,8 +286,8 @@ export default function OverviewPage() {
     const range = max - min || 1;
     
     return glucoseHistory.map((h, i) => {
-      const x = (i / (glucoseHistory.length - 1)) * 100;
-      const y = 80 - ((h.value - min) / range) * 60;
+      const x = 475 - (i / (glucoseHistory.length - 1)) * 450;
+      const y = 100 - ((h.value - min) / range) * 70;
       return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
     }).join(' ');
   };
@@ -518,14 +517,19 @@ export default function OverviewPage() {
                   </p>
                 </div>
               ) : (
-                <div className="relative mt-4">
-                  <svg className="w-full h-40 overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <div className="relative mt-4 flex justify-center">
+                  <svg className="w-full h-40 overflow-visible" viewBox="0 0 500 150">
                     <defs>
                       <linearGradient id="gradient-secondary" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#00A8B5" stopOpacity="0.2" />
                         <stop offset="100%" stopColor="#00A8B5" stopOpacity="0" />
                       </linearGradient>
                     </defs>
+                    {/* Fill area */}
+                    <path 
+                      d={`${renderChartPath()} L 25 125 L 475 125 Z`} 
+                      fill="url(#gradient-secondary)"
+                    />
                     {/* Line */}
                     <path 
                       d={renderChartPath()} 
@@ -534,44 +538,42 @@ export default function OverviewPage() {
                       strokeWidth="2.5" 
                       strokeLinecap="round"
                     />
-                    {/* Fill area */}
-                    <path 
-                      d={`${renderChartPath()} L 100 100 L 0 100 Z`} 
-                      fill="url(#gradient-secondary)"
-                    />
-                    {/* Dots */}
+                    {/* Dots & Labels */}
                     {glucoseHistory.map((h, i) => {
                       const values = glucoseHistory.map(item => item.value);
                       const min = Math.min(...values) - 10;
                       const max = Math.max(...values) + 10;
                       const range = max - min || 1;
-                      const x = (i / (glucoseHistory.length - 1)) * 100;
-                      const y = 80 - ((h.value - min) / range) * 60;
+                      const x = 475 - (i / (glucoseHistory.length - 1)) * 450;
+                      const y = 100 - ((h.value - min) / range) * 70;
                       return (
                         <g key={i}>
                           <circle 
                             cx={x} 
                             cy={y} 
-                            r="4.5" 
+                            r="5" 
                             className="fill-secondary stroke-white stroke-2" 
                           />
                           <text 
                             x={x} 
-                            y={y - 8} 
-                            className="text-[7px] font-extrabold fill-primary"
+                            y={y - 12} 
+                            className="text-[10px] font-extrabold fill-primary"
                             textAnchor="middle"
                           >
                             {h.value}
+                          </text>
+                          <text 
+                            x={x} 
+                            y={140} 
+                            className="text-[9px] font-bold fill-on-surface-variant"
+                            textAnchor="middle"
+                          >
+                            {h.label}
                           </text>
                         </g>
                       );
                     })}
                   </svg>
-                  <div className="flex justify-between text-[9px] text-on-surface-variant font-bold mt-4">
-                    {glucoseHistory.map((h, i) => (
-                      <span key={i}>{h.label}</span>
-                    ))}
-                  </div>
                 </div>
               )}
             </div>

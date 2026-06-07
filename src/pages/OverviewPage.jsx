@@ -18,7 +18,12 @@ export default function OverviewPage() {
     cholesterol: { value: '--', status: 'אין נתונים', unit: 'mg/dL', statusClass: 'bg-slate-100 text-on-surface-variant' },
     hemoglobin: { value: '--', status: 'אין נתונים', unit: 'g/dL', statusClass: 'bg-slate-100 text-on-surface-variant' }
   });
-  const [glucoseHistory, setGlucoseHistory] = useState([]);
+  const [activeMetricTab, setActiveMetricTab] = useState('glucose');
+  const [historyData, setHistoryData] = useState({
+    glucose: [],
+    cholesterol: [],
+    hemoglobin: []
+  });
 
   // --- BMI & Body Metrics State ---
   const [bodyMetrics, setBodyMetrics] = useState({
@@ -93,25 +98,49 @@ export default function OverviewPage() {
             });
           }
 
-          // 2. Fetch Glucose History from all tests
+          // 2. Fetch History from all tests
           const testIds = tests.map(t => t.id);
           const { data: allResults, error: allResultsError } = await supabase
             .from('lab_results')
-            .select('test_id, measured_value')
-            .in('test_id', testIds)
-            .or('marker_name.ilike.%glucose%,marker_name.like.%גלוקוז%');
+            .select('test_id, measured_value, marker_name')
+            .in('test_id', testIds);
             
           if (!allResultsError && allResults) {
-            const history = allResults.map(r => {
-              const test = tests.find(t => t.id === r.test_id);
-              return {
-                value: Number(r.measured_value),
-                dateStr: test ? test.test_date : '',
-                label: test ? new Date(test.test_date).toLocaleDateString('he-IL', { month: 'short', day: 'numeric' }) : ''
-              };
+            const newHistoryData = {
+              glucose: [],
+              cholesterol: [],
+              hemoglobin: []
+            };
+
+            const findCategory = (markerName) => {
+              if (!markerName) return null;
+              const name = markerName.toLowerCase();
+              if (name.includes('glucose') || name.includes('גלוקוז')) return 'glucose';
+              if (name.includes('cholesterol') || name.includes('כולסטרול')) return 'cholesterol';
+              if (name.includes('hemoglobin') || name.includes('המוגלובין') || name.includes('hb')) return 'hemoglobin';
+              return null;
+            };
+
+            allResults.forEach(r => {
+              const category = findCategory(r.marker_name);
+              if (category) {
+                const test = tests.find(t => t.id === r.test_id);
+                if (test) {
+                  newHistoryData[category].push({
+                    value: Number(r.measured_value),
+                    dateStr: test.test_date,
+                    label: new Date(test.test_date).toLocaleDateString('he-IL', { month: 'short', day: 'numeric' })
+                  });
+                }
+              }
             });
-            history.sort((a, b) => new Date(a.dateStr) - new Date(b.dateStr));
-            setGlucoseHistory(history);
+
+            // Sort each category by date ascending
+            Object.keys(newHistoryData).forEach(key => {
+              newHistoryData[key].sort((a, b) => new Date(a.dateStr) - new Date(b.dateStr));
+            });
+
+            setHistoryData(newHistoryData);
           }
         }
       } catch (err) {
@@ -278,19 +307,27 @@ export default function OverviewPage() {
     return Math.min(Math.max(percentage, 0), 100);
   };
 
-  const renderChartPath = () => {
-    if (glucoseHistory.length < 2) return '';
-    const values = glucoseHistory.map(h => h.value);
+  const renderChartPath = (history) => {
+    if (!history || history.length < 2) return '';
+    const values = history.map(h => h.value);
     const min = Math.min(...values) - 10;
     const max = Math.max(...values) + 10;
     const range = max - min || 1;
     
-    return glucoseHistory.map((h, i) => {
-      const x = 475 - (i / (glucoseHistory.length - 1)) * 450;
-      const y = 100 - ((h.value - min) / range) * 70;
+    return history.map((h, i) => {
+      const x = 465 - (i / (history.length - 1)) * 430;
+      const y = 110 - ((h.value - min) / range) * 80;
       return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
     }).join(' ');
   };
+
+  const metricConfigs = {
+    glucose: { label: 'גלוקוז', title: 'מגמת גלוקוז לאורך זמן', unit: 'mg/dL', badge: 'Glucose (mg/dL)' },
+    cholesterol: { label: 'כולסטרול', title: 'מגמת כולסטרול לאורך זמן', unit: 'mg/dL', badge: 'Cholesterol (mg/dL)' },
+    hemoglobin: { label: 'המוגלובין', title: 'מגמת המוגלובין לאורך זמן', unit: 'g/dL', badge: 'Hemoglobin (g/dL)' }
+  };
+  const activeHistory = historyData[activeMetricTab] || [];
+  const currentMetric = metricConfigs[activeMetricTab];
 
   return (
     <main className="md:pr-72 pt-24 min-h-screen transition-all">
@@ -497,28 +534,52 @@ export default function OverviewPage() {
             </div>
           </div>
 
-          {/* Dynamic Glucose Trends Graph (lg:col-span-5) */}
-          <div className="lg:col-span-5 bg-white rounded-xl custom-shadow border border-white p-lg flex flex-col justify-between min-h-[300px]">
+          {/* Dynamic Trends Graph (lg:col-span-5) */}
+          <div className="lg:col-span-5 bg-white rounded-xl custom-shadow border border-white p-lg flex flex-col justify-between min-h-[320px]">
             <div>
-              <div className="flex justify-between items-center mb-md border-b border-slate-50 pb-4">
-                <h3 className="font-heading text-xl text-primary font-bold">מגמת גלוקוז לאורך זמן</h3>
-                <span className="text-xs text-on-surface-variant font-bold uppercase tracking-wider bg-secondary/5 px-2.5 py-1 rounded-full text-secondary">
-                  Glucose (mg/dL)
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-md border-b border-slate-50 pb-4">
+                <div>
+                  <h3 className="font-heading text-xl text-primary font-bold">{currentMetric.title}</h3>
+                </div>
+                <span className="text-xs text-on-surface-variant font-bold uppercase tracking-wider bg-secondary/5 px-2.5 py-1 rounded-full text-secondary self-start sm:self-auto">
+                  {currentMetric.badge}
                 </span>
+              </div>
+
+              {/* Selector Tabs */}
+              <div className="flex flex-wrap gap-1.5 mb-6">
+                {Object.entries(metricConfigs).map(([key, config]) => {
+                  const isActive = activeMetricTab === key;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setActiveMetricTab(key)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer border-0 ${
+                        isActive 
+                          ? 'bg-secondary text-white shadow-sm' 
+                          : 'bg-slate-50 hover:bg-slate-100 text-on-surface-variant'
+                      }`}
+                    >
+                      {config.label}
+                    </button>
+                  );
+                })}
               </div>
 
               {loading ? (
                 <div className="py-8 text-center text-on-surface-variant">טוען מגמות...</div>
-              ) : glucoseHistory.length < 2 ? (
+              ) : activeHistory.length < 2 ? (
                 <div className="py-8 text-center text-on-surface-variant flex flex-col items-center justify-center min-h-[160px]">
                   <span className="material-symbols-outlined text-4xl mb-2 opacity-50">show_chart</span>
                   <p className="text-sm w-full max-w-[320px] text-center">
-                    {isFemale ? 'העלי 2 בדיקות דם או יותר כדי לצפות בגרף המגמות האישי שלך.' : 'העלה 2 בדיקות דם או יותר כדי לצפות בגרף המגמות האישי שלך.'}
+                    {isFemale 
+                      ? `העלי 2 בדיקות דם או יותר המכילות ${currentMetric.label} כדי לצפות בגרף המגמות האישי שלך.` 
+                      : `העלה 2 בדיקות דם או יותר המכילות ${currentMetric.label} כדי לצפות בגרף המגמות האישי שלך.`}
                   </p>
                 </div>
               ) : (
                 <div className="relative mt-4 flex justify-center">
-                  <svg className="w-full h-40 overflow-visible" viewBox="0 0 500 150">
+                  <svg className="w-full h-44 overflow-visible" viewBox="0 0 500 165">
                     <defs>
                       <linearGradient id="gradient-secondary" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#00A8B5" stopOpacity="0.2" />
@@ -527,45 +588,45 @@ export default function OverviewPage() {
                     </defs>
                     {/* Fill area */}
                     <path 
-                      d={`${renderChartPath()} L 25 125 L 475 125 Z`} 
+                      d={`${renderChartPath(activeHistory)} L 35 130 L 465 130 Z`} 
                       fill="url(#gradient-secondary)"
                     />
                     {/* Line */}
                     <path 
-                      d={renderChartPath()} 
+                      d={renderChartPath(activeHistory)} 
                       fill="none" 
                       stroke="#00A8B5" 
-                      strokeWidth="2.5" 
+                      strokeWidth="3.5" 
                       strokeLinecap="round"
                     />
                     {/* Dots & Labels */}
-                    {glucoseHistory.map((h, i) => {
-                      const values = glucoseHistory.map(item => item.value);
+                    {activeHistory.map((h, i) => {
+                      const values = activeHistory.map(item => item.value);
                       const min = Math.min(...values) - 10;
                       const max = Math.max(...values) + 10;
                       const range = max - min || 1;
-                      const x = 475 - (i / (glucoseHistory.length - 1)) * 450;
-                      const y = 100 - ((h.value - min) / range) * 70;
+                      const x = 465 - (i / (activeHistory.length - 1)) * 430;
+                      const y = 110 - ((h.value - min) / range) * 80;
                       return (
                         <g key={i}>
                           <circle 
                             cx={x} 
                             cy={y} 
-                            r="5" 
+                            r="6.5" 
                             className="fill-secondary stroke-white stroke-2" 
                           />
                           <text 
                             x={x} 
                             y={y - 12} 
-                            className="text-[10px] font-extrabold fill-primary"
+                            className="text-[13px] font-extrabold fill-primary"
                             textAnchor="middle"
                           >
                             {h.value}
                           </text>
                           <text 
                             x={x} 
-                            y={140} 
-                            className="text-[9px] font-bold fill-on-surface-variant"
+                            y={145} 
+                            className="text-[11px] font-bold fill-on-surface-variant"
                             textAnchor="middle"
                           >
                             {h.label}

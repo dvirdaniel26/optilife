@@ -102,7 +102,7 @@ export default function OverviewPage() {
           const testIds = tests.map(t => t.id);
           const { data: allResults, error: allResultsError } = await supabase
             .from('lab_results')
-            .select('test_id, measured_value, marker_name')
+            .select('test_id, measured_value, marker_name, is_abnormal')
             .in('test_id', testIds);
             
           if (!allResultsError && allResults) {
@@ -129,6 +129,7 @@ export default function OverviewPage() {
                   newHistoryData[category].push({
                     value: Number(r.measured_value),
                     dateStr: test.test_date,
+                    isAbnormal: !!r.is_abnormal,
                     label: new Date(test.test_date).toLocaleDateString('he-IL', { month: 'short', day: 'numeric' })
                   });
                 }
@@ -613,7 +614,7 @@ export default function OverviewPage() {
                             cx={x} 
                             cy={y} 
                             r="6.5" 
-                            className="fill-secondary stroke-white stroke-2" 
+                            className={`${h.isAbnormal ? 'fill-status-error' : 'fill-secondary'} stroke-white stroke-2`} 
                           />
                           <text 
                             x={x} 

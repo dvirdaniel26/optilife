@@ -720,11 +720,7 @@ export default function Auth({ isRecovery, onRecoveryComplete }) {
               </div>
             )}
 
-            {isLogin && !isResetPassword && (
-              <p className="text-[10px] text-on-surface-variant/80 text-center mb-4 leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-100/50">
-                ⚠️ שימו לב: משתמשים שנרשמו באמצעות **Google** חייבים להתחבר באמצעות כפתור גוגל בלבד. התחברות מהירה במייל או סיסמה רגילה לא יפעלו עבור חשבונות אלו.
-              </p>
-            )}
+
 
             {/* OAuth Buttons */}
             {!isResetPassword && (

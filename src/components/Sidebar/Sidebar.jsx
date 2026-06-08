@@ -79,7 +79,7 @@ export default function Sidebar({ isOpen, closeSidebar }) {
               className={`flex items-center gap-md px-xl py-sm transition-all ${isActive('/coach') ? 'bg-secondary/5 text-secondary font-bold border-r-4 border-secondary' : 'text-on-surface-variant hover:text-secondary'}`}
             >
               <span className="material-symbols-outlined">supervisor_account</span>
-              לוח בקרה למאמן
+              לוח בקרה למנהל
             </Link>
             <Link 
               to="/support" 

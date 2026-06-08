@@ -236,9 +236,9 @@ export default function Navbar({ toggleSidebar }) {
               <p className="text-sm font-bold text-primary leading-tight">{fullName}</p>
               <p className={`text-[10px] font-extrabold uppercase tracking-wider ${profile?.role === 'coach' || profile?.role === 'admin' ? 'text-secondary' : (isPremium ? 'text-secondary' : 'text-on-surface-variant')} mt-0.5`}>
                 {profile?.role === 'coach' 
-                  ? 'צוות מקצועי • מאמן 🍏' 
+                  ? 'צוות מקצועי • מנהל 🍏' 
                   : profile?.role === 'admin' 
-                    ? 'מנהל מערכת 🛡️' 
+                    ? 'מנהל מערכת 🛡️'  
                     : isPremium 
                       ? (profile?.gender === 'female' ? 'משתמשת Premium 👑' : 'משתמש Premium 👑') 
                       : 'מסלול חינמי'}
@@ -255,7 +255,7 @@ export default function Navbar({ toggleSidebar }) {
                 <p className="text-sm font-bold text-primary">{fullName}</p>
                 <p className={`text-[10px] font-extrabold uppercase tracking-wider ${profile?.role === 'coach' || profile?.role === 'admin' ? 'text-secondary' : (isPremium ? 'text-secondary' : 'text-on-surface-variant')}`}>
                   {profile?.role === 'coach' 
-                    ? 'צוות מקצועי • מאמן 🍏' 
+                    ? 'צוות מקצועי • מנהל 🍏' 
                     : profile?.role === 'admin' 
                       ? 'מנהל מערכת 🛡️' 
                       : isPremium 
@@ -287,10 +287,10 @@ export default function Navbar({ toggleSidebar }) {
                         localStorage.setItem('optilife_coach_view', newMode);
                         addNotification({
                           type: 'info',
-                          title: newMode === 'user' ? 'עברת לתצוגת משתמש 👤' : 'חזרת לתצוגת מאמן 🖥️',
+                          title: newMode === 'user' ? 'עברת לתצוגת משתמש 👤' : 'חזרת לתצוגת מנהל 🖥️',
                           message: newMode === 'user' 
                             ? (profile?.gender === 'female' ? 'כעת כל תפריטי הלקוח פתוחים בפניייך.' : 'כעת כל תפריטי הלקוח פתוחים בפניך.')
-                            : 'חזרת לניהול פניות הלקוחות ולוח הבקרה של המאמנים.',
+                            : 'חזרת לניהול פניות הלקוחות ולוח הבקרה של מנהלי המערכת.',
                           link: '/settings'
                         });
                         setIsProfileOpen(false);
@@ -301,7 +301,7 @@ export default function Navbar({ toggleSidebar }) {
                       <span className="material-symbols-outlined text-secondary text-lg">
                         {coachViewMode === 'user' ? 'supervised_user_circle' : 'account_circle'}
                       </span>
-                      <span>{coachViewMode === 'user' ? 'חזרה לתצוגת מאמן 🖥️' : 'מעבר לתצוגת משתמש 👤'}</span>
+                      <span>{coachViewMode === 'user' ? 'חזרה לתצוגת מנהל 🖥️' : 'מעבר לתצוגת משתמש 👤'}</span>
                     </button>
                   )}
                 </div>
@@ -365,7 +365,7 @@ export default function Navbar({ toggleSidebar }) {
               <div className="text-right">
                 <p className="text-xs font-bold text-primary">מצב תצוגת מערכת 🔄</p>
                 <p className="text-[10px] text-slate-500">
-                  {coachViewMode === 'user' ? 'תצוגת משתמש (בדיקות, מדדים, תוכנית בריאות)' : 'תצוגת מאמן (ניהול לקוחות, פניות תמיכה)'}
+                  {coachViewMode === 'user' ? 'תצוגת משתמש (בדיקות, מדדים, תוכנית בריאות)' : 'תצוגת מנהל (ניהול לקוחות, פניות תמיכה)'}
                 </p>
               </div>
               <button
@@ -375,10 +375,10 @@ export default function Navbar({ toggleSidebar }) {
                   localStorage.setItem('optilife_coach_view', newMode);
                   addNotification({
                     type: 'info',
-                    title: newMode === 'user' ? 'עברת לתצוגת משתמש 👤' : 'חזרת לתצוגת מאמן 🖥️',
+                    title: newMode === 'user' ? 'עברת לתצוגת משתמש 👤' : 'חזרת לתצוגת מנהל 🖥️',
                     message: newMode === 'user' 
                       ? (profile?.gender === 'female' ? 'כעת כל תפריטי הלקוח פתוחים בפנייך.' : 'כעת כל תפריטי הלקוח פתוחים בפניך.')
-                      : 'חזרת לניהול פניות הלקוחות ולוח הבקרה של המאמנים.',
+                      : 'חזרת לניהול פניות הלקוחות ולוח הבקרה של מנהלי המערכת.',
                     link: '/settings'
                   });
                   setIsSupportModalOpen(false);
@@ -386,7 +386,7 @@ export default function Navbar({ toggleSidebar }) {
                 }}
                 className="px-4 py-2 bg-secondary hover:bg-secondary/90 text-white font-bold rounded-xl text-[11px] transition-all cursor-pointer border-0 shadow-sm whitespace-nowrap active:scale-95"
               >
-                {coachViewMode === 'user' ? 'חזרה לתצוגת מאמן 🖥️' : 'מעבר לתצוגת משתמש 👤'}
+                {coachViewMode === 'user' ? 'חזרה לתצוגת מנהל 🖥️' : 'מעבר לתצוגת משתמש 👤'}
               </button>
             </div>
           )}
@@ -490,7 +490,7 @@ export default function Navbar({ toggleSidebar }) {
                         addNotification({
                           type: 'success',
                           title: 'פנייתך התקבלה בהצלחה! 📩',
-                          message: `נושא: ${supportSubject}. פנייתך נרשמה בהצלחה במערכת ותיענה על ידי צוות המאמנים בהקדם. תוכל לעקוב אחריה בדף פניות ותמיכה.`,
+                          message: `נושא: ${supportSubject}. פנייתך נרשמה בהצלחה במערכת ותיענה על ידי מנהלי המערכת בהקדם. תוכל לעקוב אחריה בדף פניות ותמיכה.`,
                           link: '/support'
                         });
 

@@ -542,8 +542,8 @@ export default function SettingsPage() {
                 <h4 className="font-heading text-lg font-bold text-primary">מצב תצוגת מערכת 🔄</h4>
                 <p className="text-xs text-on-surface-variant leading-relaxed mt-1">
                   {coachViewMode === 'user'
-                    ? (isFemale ? 'את נמצאת כעת במצב תצוגת משתמש רגיל. תוכלי להשתמש בכל הפיצ\'רים של הלקוחות או לחזור לניהול המאמן.' : 'אתה נמצא כעת במצב תצוגת משתמש רגיל. תוכל להשתמש בכל הפיצ\'רים של הלקוחות או לחזור לניהול המאמן.')
-                    : (isFemale ? 'כמאמנת במערכת, את יכולה להחליף את מצב התצוגה לתצוגת משתמש רגיל על מנת להתנסות בכל התכונות (העלאת בדיקות, ניתוח מדדים, תוכנית בריאות ועוד).' : 'כמאמן במערכת, אתה יכול להחליף את מצב התצוגה לתצוגת משתמש רגיל על מנת להתנסות בכל התכונות (העלאת בדיקות, ניתוח מדדים, תוכנית בריאות ועוד).')}
+                    ? (isFemale ? 'את נמצאת כעת במצב תצוגת משתמש רגיל. תוכלי להשתמש בכל הפיצ\'רים של הלקוחות או לחזור לניהול המערכת.' : 'אתה נמצא כעת במצב תצוגת משתמש רגיל. תוכל להשתמש בכל הפיצ\'רים של הלקוחות או לחזור לניהול המערכת.')
+                    : (isFemale ? 'כמנהלת במערכת, את יכולה להחליף את מצב התצוגה לתצוגת משתמש רגיל על מנת להתנסות בכל התכונות (העלאת בדיקות, ניתוח מדדים, תוכנית בריאות ועוד).' : 'כמנהל במערכת, אתה יכול להחליף את מצב התצוגה לתצוגת משתמש רגיל על מנת להתנסות בכל התכונות (העלאת בדיקות, ניתוח מדדים, תוכנית בריאות ועוד).')}
                 </p>
               </div>
             </div>
@@ -554,17 +554,17 @@ export default function SettingsPage() {
                 localStorage.setItem('optilife_coach_view', newMode);
                 addNotification({
                   type: 'info',
-                  title: newMode === 'user' ? 'עברת לתצוגת משתמש 👤' : 'חזרת לתצוגת מאמן 🖥️',
+                  title: newMode === 'user' ? 'עברת לתצוגת משתמש 👤' : 'חזרת לתצוגת מנהל 🖥️',
                   message: newMode === 'user' 
                     ? (isFemale ? 'כעת כל תפריטי הלקוח פתוחים בפנייך.' : 'כעת כל תפריטי הלקוח פתוחים בפניך.')
-                    : 'חזרת לניהול פניות הלקוחות ולוח הבקרה של המאמנים.',
+                    : 'חזרת לניהול פניות הלקוחות ולוח הבקרה של המנהלים.',
                   link: '/settings'
                 });
                 navigate(newMode === 'user' ? '/dashboard' : '/coach');
               }}
               className="px-6 py-2.5 bg-secondary hover:bg-secondary/90 text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all text-xs whitespace-nowrap cursor-pointer border-0"
             >
-              {coachViewMode === 'user' ? 'חזרה לתצוגת מאמן 🖥️' : 'מעבר לתצוגת משתמש 👤'}
+              {coachViewMode === 'user' ? 'חזרה לתצוגת מנהל 🖥️' : 'מעבר לתצוגת משתמש 👤'}
             </button>
           </div>
         )}
@@ -678,7 +678,7 @@ export default function SettingsPage() {
                   אישור שיתוף נתונים וליווי מקצועי
                 </h3>
                 <p className="text-on-surface-variant text-sm mb-6 leading-relaxed font-body">
-                  כאשר שיתוף הנתונים מאושר, המאמנים והתזונאים המוסמכים של OptiLife יוכלו לצפות בבדיקות הדם שלך, לעקוב אחר המדדים שלך ולשלוח לך הנחיות תזונה ואימונים מותאמות אישית.
+                  כאשר שיתוף הנתונים מאושר, מנהלי המערכת והתזונאים המוסמכים של OptiLife יוכלו לצפות בבדיקות הדם שלך, לעקוב אחר המדדים שלך ולשלוח לך הנחיות תזונה ואימונים מותאמות אישית.
                 </p>
                 
                 <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 text-right flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

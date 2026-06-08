@@ -351,7 +351,7 @@ export default function TestAnalysisPage() {
               <div className="flex items-center gap-xs text-amber-800">
                 <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0" />
                 <span className="font-medium">
-                  <strong>שים לב:</strong> המידע שלך אינו משותף כעת עם צוות המאמנים המקצועי באתר.
+                  <strong>שים לב:</strong> המידע שלך אינו משותף כעת עם צוות המנהלים המקצועי באתר.
                 </span>
               </div>
               <button 
@@ -678,7 +678,7 @@ export default function TestAnalysisPage() {
 
               <div className="space-y-sm py-xs">
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  המאמנים והתזונאים המוסמכים של <strong>OptiLife</strong> יכולים ללוות אותך באופן אישי, לעקוב אחר מדדי הבריאות שלך, ולפנות אליך עם המלצות תזונה ושיפור בריאות מותאמות אישית.
+                  מנהלי המערכת והתזונאים המוסמכים של <strong>OptiLife</strong> יכולים ללוות אותך באופן אישי, לעקוב אחר מדדי הבריאות שלך, ולפנות אליך עם המלצות תזונה ושיפור בריאות מותאמות אישית.
                 </p>
 
                 <div className="bg-slate-50 rounded-2xl p-sm border border-slate-100 flex flex-col gap-sm">

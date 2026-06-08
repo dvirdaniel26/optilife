@@ -7,20 +7,6 @@ import { useNavigate } from 'react-router-dom';
 const translateAuthError = (message, currentEmail, isLogin) => {
   if (!message) return null;
   const msg = typeof message === 'string' ? message.toLowerCase() : String(message).toLowerCase();
-  const isGoogleMail = currentEmail && currentEmail.toLowerCase().endsWith('@gmail.com');
-
-  // Intercept Google account errors only during login and strictly for credential conflicts
-  if (isLogin && isGoogleMail && (
-    msg.includes('invalid login credentials') || 
-    msg.includes('user not found') || 
-    msg.includes('invalid credentials')
-  )) {
-    return {
-      title: 'התחברות באמצעות Google בלבד',
-      description: 'חשבון זה רשום ומאובטח דרך Google.\n\nעליך להתחבר באמצעות לחיצה על כפתור **"התחברו באמצעות Google"** שבתחתית העמוד בלבד.'
-    };
-  }
-
   // 1. Email rate limit
   if (msg.includes('rate limit exceeded') || msg.includes('rate_limit') || msg.includes('too many requests')) {
     return {
@@ -33,7 +19,7 @@ const translateAuthError = (message, currentEmail, isLogin) => {
   if (msg.includes('invalid login credentials') || msg.includes('user not found') || msg.includes('invalid credentials')) {
     return {
       title: 'פרטי ההתחברות אינם נכונים',
-      description: 'כתובת האימייל או הסיסמה שהזנת אינם תואמים לרישומים שלנו. אנא ודא שהקלדת אותם נכון ונסה שוב.'
+      description: 'כתובת האימייל או הסיסמה שהזנת אינם תואמים לרישומים שלנו. אנא ודא שהקלדת אותם נכון ונסה שוב.\n\n💡 **טיפ:** אם נרשמת בעבר באמצעות Google, עליך להתחבר באמצעות כפתור "התחברו באמצעות Google" שבתחתית העמוד.'
     };
   }
 

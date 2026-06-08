@@ -19,7 +19,7 @@ const translateAuthError = (message, currentEmail, isLogin) => {
   if (msg.includes('invalid login credentials') || msg.includes('user not found') || msg.includes('invalid credentials')) {
     return {
       title: 'פרטי ההתחברות אינם נכונים',
-      description: 'כתובת האימייל או הסיסמה שהזנת אינם תואמים לרישומים שלנו. אנא ודא שהקלדת אותם נכון ונסה שוב.\n\n💡 **טיפ:** אם נרשמת בעבר באמצעות Google, עליך להתחבר באמצעות כפתור "התחברו באמצעות Google" שבתחתית העמוד.'
+      description: 'כתובת האימייל או הסיסמה שהזנת אינם תואמים לרישומים שלנו. אנא ודא שהקלדת אותם נכון ונסה שוב.'
     };
   }
 

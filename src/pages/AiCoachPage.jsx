@@ -16,6 +16,24 @@ export default function AiCoachPage() {
   const isFemale = profile?.gender === 'female';
   const isSubscriber = profile?.subscription_tier === 'ai_ultimate';
 
+  const renderMessageText = (text, isAiSender) => {
+    if (!text) return '';
+    const parts = text.split('**');
+    return parts.map((part, index) => {
+      if (index % 2 === 1) {
+        return (
+          <strong 
+            key={index} 
+            className={`font-extrabold ${isAiSender ? 'text-primary' : 'text-white'}`}
+          >
+            {part}
+          </strong>
+        );
+      }
+      return part;
+    });
+  };
+
   // State for loading DB tests
   const [dbLoading, setDbLoading] = useState(true);
   const [latestTestInfo, setLatestTestInfo] = useState(null);
@@ -280,7 +298,7 @@ export default function AiCoachPage() {
             <div className="max-w-xl">
               <h3 className="font-heading text-xl md:text-2xl text-primary font-bold mb-2">פתחי/י ליווי AI מותאם אישית</h3>
               <p className="text-xs md:text-sm text-slate-600 leading-relaxed">
-                מנוע מאמן הבריאות של OptiLife AI סורק ומנתח את בדיקות הדם שלך ומעניק לך ייעוץ אקטיבי 24/7. שדרג למסלול **AI Ultimate** כדי להתחיל להתכתב איתו ולשאול שאלות המשך.
+                מנוע מאמן הבריאות של OptiLife AI סורק ומנתח את בדיקות הדם שלך ומעניק לך ייעוץ אקטיבי 24/7. שדרג למסלול <strong className="font-bold text-secondary">AI Ultimate</strong> כדי להתחיל להתכתב איתו ולשאול שאלות המשך.
               </p>
             </div>
 
@@ -400,7 +418,7 @@ export default function AiCoachPage() {
                             {isAi ? 'AI Health Coach' : (profile?.first_name || 'אני')}
                           </span>
                           <div className={`px-md py-sm rounded-2xl text-xs text-right leading-relaxed shadow-sm border whitespace-pre-line ${!isAi ? 'bg-secondary text-white border-secondary/20 rounded-tl-none text-left' : 'bg-white border-slate-150 text-slate-700 rounded-tr-none'}`}>
-                            {msg.text}
+                            {renderMessageText(msg.text, isAi)}
                           </div>
                           <span className={`text-[8px] text-slate-400 font-semibold ${!isAi ? 'self-end pl-1' : 'self-start pr-1'}`}>
                             {msg.time}

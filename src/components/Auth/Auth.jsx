@@ -35,7 +35,7 @@ const translateAuthError = (message, currentEmail, isLogin) => {
   if (msg.includes('user already registered') || msg.includes('user already exists')) {
     return {
       title: 'כתובת אימייל זו כבר רשומה',
-      description: 'קיים כבר חשבון הרשום עם כתובת המייל הזו במערכת.\n\n💡 **מה לעשות?** עבור למסך ההתחברות כדי להיכנס, או לחץ על קישור "שכחת סיסמה" כדי לשחזר את הגישה.'
+      description: 'קיים כבר חשבון הרשום עם כתובת המייל הזו במערכת.\n\n💡 מה לעשות? עבור למסך ההתחברות כדי להיכנס, או לחץ על קישור "שכחת סיסמה" כדי לשחזר את הגישה.'
     };
   }
 

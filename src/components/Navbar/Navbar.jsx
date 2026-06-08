@@ -407,7 +407,7 @@ export default function Navbar({ toggleSidebar }) {
                   <span className="material-symbols-outlined text-xs group-open:rotate-180 transition-transform">expand_more</span>
                 </summary>
                 <p className="text-xs text-on-surface-variant leading-relaxed mt-2 pl-4">
-                  ניתן ללחוץ על כפתור ה-**"UPLOAD TEST"** הכתום בתחתית התפריט הצידי, או על **"העלה בדיקה חדשה"** במסך הראשי. המערכת תומכת בהעלאת קבצי PDF או תמונות (PNG/JPG) של בדיקות דם מהקופה.
+                  ניתן ללחוץ על כפתור ה-<span className="font-bold">"UPLOAD TEST"</span> הכתום בתחתית התפריט הצידי, או על <span className="font-bold">"העלה בדיקה חדשה"</span> במסך הראשי. המערכת תומכת בהעלאת קבצי PDF או תמונות (PNG/JPG) של בדיקות דם מהקופה.
                 </p>
               </details>
 
@@ -427,7 +427,7 @@ export default function Navbar({ toggleSidebar }) {
                   <span className="material-symbols-outlined text-xs group-open:rotate-180 transition-transform">expand_more</span>
                 </summary>
                 <p className="text-xs text-on-surface-variant leading-relaxed mt-2 pl-4">
-                  תוכל לבטל את מנוי הפרימיום שלך בכל עת דרך עמוד **"הגדרות חשבון"** תחת כרטיסיית המנוי בצד שמאל, על ידי לחיצה על כפתור **"ביטול מנוי"**. החשבון יוחזר מיידית למסלול החינמי.
+                  תוכל לבטל את מנוי הפרימיום שלך בכל עת דרך עמוד <span className="font-bold">"הגדרות חשבון"</span> תחת כרטיסיית המנוי בצד שמאל, על ידי לחיצה על כפתור <span className="font-bold">"ביטול מנוי"</span>. החשבון יוחזר מיידית למסלול החינמי.
                 </p>
               </details>
             </div>

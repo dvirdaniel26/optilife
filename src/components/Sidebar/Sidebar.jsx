@@ -119,6 +119,18 @@ export default function Sidebar({ isOpen, closeSidebar }) {
               <span className="material-symbols-outlined">favorite</span>
               הבריאות שלי
             </Link>
+            <Link 
+              to="/ai-coach" 
+              className={`flex items-center justify-between px-xl py-sm transition-all ${isActive('/ai-coach') ? 'bg-secondary/5 text-secondary font-bold border-r-4 border-secondary' : 'text-on-surface-variant hover:text-secondary'}`}
+            >
+              <div className="flex items-center gap-md">
+                <span className="material-symbols-outlined">psychology</span>
+                <span>מאמן בריאות AI</span>
+              </div>
+              {profile?.subscription_tier !== 'ai_ultimate' && (
+                <span className="material-symbols-outlined text-[16px] text-slate-450">lock</span>
+              )}
+            </Link>
 
             {!isPremium && (
               <Link 

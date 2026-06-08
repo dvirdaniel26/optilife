@@ -2,14 +2,19 @@ import { useState, useContext, useEffect } from 'react';
 import { UserContext } from '../App';
 import { NotificationsContext } from '../context/NotificationsContext';
 import { supabase } from '../lib/supabase';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Loader2, CreditCard, ShieldCheck, ArrowRight, CheckCircle2, Lock, Smartphone } from 'lucide-react';
 
 export default function CheckoutPage() {
   const { session, profile, setProfile } = useContext(UserContext);
   const { addNotification } = useContext(NotificationsContext);
   const navigate = useNavigate();
+  const location = useLocation();
   const isFemale = profile?.gender === 'female';
+
+  const selectedPlan = location.state?.plan === 'ai_ultimate' ? 'ai_ultimate' : 'premium';
+  const priceLabel = selectedPlan === 'ai_ultimate' ? '₪49.00' : '₪29.00';
+  const planNameHebrew = selectedPlan === 'ai_ultimate' ? 'OptiLife AI Ultimate 🧠' : 'OptiLife Premium 👑';
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -80,31 +85,33 @@ export default function CheckoutPage() {
       // Simulate network latency for payment gateway authorization
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      // Update user subscription tier to premium in database
+      // Update user subscription tier to selectedPlan in database
       const { error: dbError } = await supabase
         .from('profiles')
-        .update({ subscription_tier: 'premium' })
+        .update({ subscription_tier: selectedPlan })
         .eq('id', session.user.id);
 
       if (dbError) throw dbError;
 
       // Update locally in context
       if (setProfile && profile) {
-        setProfile({ ...profile, subscription_tier: 'premium' });
+        setProfile({ ...profile, subscription_tier: selectedPlan });
       }
 
       // Trigger standard success states
       setSuccess(true);
       addNotification({
         type: 'success',
-        title: 'ברוכים הבאים ל-OptiLife Premium! 🎉',
-        message: 'העסקה בוצעה בהצלחה. כל תכונות ה-AI, ניתוח המגמות ודוחות ה-PDF פתוחים כעת בפניך!',
-        link: '/dashboard'
+        title: selectedPlan === 'ai_ultimate' ? 'ברוכים הבאים ל-OptiLife AI Ultimate! ⚡' : 'ברוכים הבאים ל-OptiLife Premium! 🎉',
+        message: selectedPlan === 'ai_ultimate'
+          ? 'העסקה בוצעה בהצלחה. צ\'אט מאמן הבריאות ה-AI, מחולל התפריטים והחיזויים פתוחים בפניך כעת!'
+          : 'העסקה בוצעה בהצלחה. כל תכונות ה-AI, ניתוח המגמות ודוחות ה-PDF פתוחים כעת בפניך!',
+        link: selectedPlan === 'ai_ultimate' ? '/ai-coach' : '/dashboard'
       });
 
       // Redirect after success animation
       setTimeout(() => {
-        navigate('/dashboard');
+        navigate(selectedPlan === 'ai_ultimate' ? '/ai-coach' : '/dashboard');
       }, 3000);
 
     } catch (err) {
@@ -304,7 +311,7 @@ export default function CheckoutPage() {
                 disabled={loading}
                 className="w-full mt-6 py-4 bg-accent-action text-primary rounded-xl font-bold hover:bg-accent-action/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform active:scale-[0.98] flex items-center justify-center gap-2 shadow-lg shadow-accent-action/10 cursor-pointer text-base"
               >
-                {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : (isFemale ? 'שלמי ₪29.00 חודשי' : 'שלם ₪29.00 חודשי')}
+                {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : (isFemale ? `שלמי ${priceLabel} חודשי` : `שלם ${priceLabel} חודשי`)}
               </button>
             </form>
           ) : (
@@ -362,18 +369,20 @@ export default function CheckoutPage() {
           <div className="space-y-4">
             <div className="flex justify-between items-start gap-4">
               <div>
-                <h3 className="font-bold text-primary text-sm">מנוי OptiLife Premium</h3>
+                <h3 className="font-bold text-primary text-sm">מנוי {planNameHebrew}</h3>
                 <p className="text-[11px] text-on-surface-variant leading-relaxed mt-1">
-                  תוכנית חודשית לניתוח בדיקות דם עם AI, המלצות כושר ותזונה מפורטות, הפקת דוחות PDF מקיפים ומעקב מגמות בריאותיות.
+                  {selectedPlan === 'ai_ultimate'
+                    ? 'החבילה הטכנולוגית המלאה: צ\'אט פתוח עם מאמן בריאות AI אינטראקטיבי 24/7, מחולל תפריטים, ומגמות חיזוי מתקדמות לצד כל יכולות הפרימיום.'
+                    : 'תוכנית חודשית לניתוח בדיקות דם עם AI, המלצות כושר ותזונה מפורטות, הפקת דוחות PDF מקיפים ומעקב מגמות בריאותיות.'}
                 </p>
               </div>
-              <span className="font-bold text-primary shrink-0 text-sm">₪29.00</span>
+              <span className="font-bold text-primary shrink-0 text-sm">{priceLabel}</span>
             </div>
 
             <div className="bg-slate-50 border border-slate-100/50 p-4 rounded-2xl text-xs space-y-2">
               <div className="flex justify-between">
                 <span className="text-on-surface-variant">סכום ביניים:</span>
-                <span className="font-semibold text-primary">₪29.00</span>
+                <span className="font-semibold text-primary">{priceLabel}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-on-surface-variant">מע״מ (17%):</span>
@@ -381,7 +390,7 @@ export default function CheckoutPage() {
               </div>
               <div className="border-t border-slate-200/50 my-2 pt-2 flex justify-between text-sm font-bold">
                 <span className="text-primary">סה״כ לתשלום:</span>
-                <span className="text-secondary">₪29.00 / חודש</span>
+                <span className="text-secondary">{priceLabel} / חודש</span>
               </div>
             </div>
           </div>
@@ -389,25 +398,48 @@ export default function CheckoutPage() {
           <div className="bg-secondary/5 rounded-2xl p-4 border border-secondary/10 space-y-3">
             <h4 className="font-bold text-secondary text-xs flex items-center gap-1.5">
               <span className="material-symbols-outlined text-lg">workspace_premium</span>
-              הטבות הפרימיום שלך:
+              הטבות המסלול שלך:
             </h4>
             <ul className="space-y-2 text-[11px] text-slate-700">
-              <li className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-secondary shrink-0" />
-                <span>ניתוח בדיקות דם ללא הגבלה במקום פעם אחת</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-secondary shrink-0" />
-                <span>המלצות תזונה וכושר מותאמות מדדים (AI)</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-secondary shrink-0" />
-                <span>ייצוא דוח PDF מהודר לשיתוף עם הרופא</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-secondary shrink-0" />
-                <span>גרפים ומעקב מגמות לאורך זמן</span>
-              </li>
+              {selectedPlan === 'ai_ultimate' ? (
+                <>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-secondary shrink-0" />
+                    <span>💬 צ'אט אינטראקטיבי פתוח 24/7 עם AI Health Coach</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-secondary shrink-0" />
+                    <span>🥦 מחולל תפריטים ומתכונים מבוסס חוסרים</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-secondary shrink-0" />
+                    <span>🔮 מנוע חיזוי ומגמות מדדים עתידיות</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-secondary shrink-0" />
+                    <span>🔬 מנתח שילוב תרופות ותוספים</span>
+                  </li>
+                </>
+              ) : (
+                <>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-secondary shrink-0" />
+                    <span>ניתוח בדיקות דם ללא הגבלה במקום פעם אחת</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-secondary shrink-0" />
+                    <span>המלצות תזונה וכושר מותאמות מדדים (AI)</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-secondary shrink-0" />
+                    <span>ייצוא דוח PDF מהודר לשיתוף עם הרופא</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-secondary shrink-0" />
+                    <span>גרפים ומעקב מגמות לאורך זמן</span>
+                  </li>
+                </>
+              )}
             </ul>
           </div>
         </div>

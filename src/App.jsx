@@ -19,6 +19,7 @@ import CheckoutPage from './pages/CheckoutPage';
 import NotificationsPage from './pages/NotificationsPage';
 import CoachDashboard from './pages/CoachDashboard';
 import SupportInboxPage from './pages/SupportInboxPage';
+import AiCoachPage from './pages/AiCoachPage';
 
 export const UserContext = createContext();
 
@@ -214,7 +215,7 @@ export default function App() {
   const getPremiumStatus = (prof) => {
     if (!prof) return false;
     const tier = prof.subscription_tier;
-    if (tier === 'premium') return true;
+    if (tier === 'premium' || tier === 'ai_ultimate') return true;
     if (tier?.startsWith('premium_cancelled:')) {
       const endDateStr = tier.split(':')[1];
       const endDate = new Date(endDateStr);
@@ -318,6 +319,14 @@ export default function App() {
                   isCoachOrAdmin 
                     ? <Navigate to="/coach" replace /> 
                     : <ActionPlanPage />
+                } 
+              />
+              <Route 
+                path="/ai-coach" 
+                element={
+                  isCoachOrAdmin 
+                    ? <Navigate to="/coach" replace /> 
+                    : <AiCoachPage />
                 } 
               />
               <Route path="/support" element={<SupportInboxPage />} />

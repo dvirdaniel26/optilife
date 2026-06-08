@@ -509,8 +509,9 @@ export default function SettingsPage() {
     }
   };
 
-  const isPremiumActive = profile?.subscription_tier === 'premium';
+  const isPremiumActive = profile?.subscription_tier === 'premium' || profile?.subscription_tier === 'ai_ultimate';
   const isPremiumCancelled = profile?.subscription_tier?.startsWith('premium_cancelled:');
+  const isAiUltimate = profile?.subscription_tier === 'ai_ultimate';
   
   let cancelledDateFormatted = '';
   if (isPremiumCancelled) {
@@ -1033,10 +1034,10 @@ export default function SettingsPage() {
                 
                 <div className="mb-6">
                   <div className={`text-3xl font-bold mb-1 ${isPremium ? 'text-white' : 'text-primary'}`}>
-                    {isPremiumActive ? 'Premium' : isPremiumCancelled ? 'Premium (מבוטל)' : 'חינמי'}
+                    {isAiUltimate ? 'AI Ultimate ⚡' : (profile?.subscription_tier === 'premium') ? 'Premium' : isPremiumCancelled ? 'Premium (מבוטל)' : 'חינמי'}
                   </div>
                   <p className={isPremium ? 'text-white/70 text-sm' : 'text-on-surface-variant text-sm'}>
-                    {isPremium ? 'גישה מלאה לכל יכולות המערכת' : 'גישה בסיסית בלבד'}
+                    {isPremium ? (isAiUltimate ? 'גישה מלאה לליווי AI וכל תכונות המערכת' : 'גישה מלאה לכל יכולות המערכת') : 'גישה בסיסית בלבד'}
                   </p>
                 </div>
                 
@@ -1044,7 +1045,7 @@ export default function SettingsPage() {
                   <div className="space-y-4">
                     <div className="p-4 bg-white/10 rounded-xl">
                       <p className="text-white text-sm font-medium mb-1">התשלום הבא</p>
-                      <p className="text-white/80 text-xs">יחויב בעוד חודש (₪29.00)</p>
+                      <p className="text-white/80 text-xs">יחויב בעוד חודש ({isAiUltimate ? '₪49.00' : '₪29.00'})</p>
                     </div>
                     
                     <button 

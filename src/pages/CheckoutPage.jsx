@@ -122,6 +122,27 @@ export default function CheckoutPage() {
     }
   };
 
+  const handleStripeRedirect = () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const premiumLink = import.meta.env.VITE_STRIPE_PAYMENT_LINK;
+      const ultimateLink = import.meta.env.VITE_STRIPE_PAYMENT_LINK_ULTIMATE || premiumLink;
+      const targetLink = selectedPlan === 'ai_ultimate' ? ultimateLink : premiumLink;
+      
+      if (targetLink) {
+        // Stripe payment link URL
+        window.location.href = targetLink;
+      } else {
+        throw new Error('קישור Stripe לא מוגדר בקובץ ההגדרות.');
+      }
+    } catch (err) {
+      console.error(err);
+      setError('אירעה שגיאה במעבר לסליקה ב-Stripe.');
+      setLoading(false);
+    }
+  };
+
   if (success) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-body text-right" dir="rtl">
@@ -186,20 +207,27 @@ export default function CheckoutPage() {
           )}
 
           {/* Payment Method Tabs */}
-          <div className="flex bg-slate-50 border border-slate-100 p-1 rounded-xl text-xs font-semibold">
+          <div className="flex bg-slate-50 border border-slate-100 p-1 rounded-xl text-xs font-semibold w-full">
             <button 
               onClick={() => { setPaymentMethod('card'); setError(null); }}
-              className={`w-1/2 py-3 text-center rounded-lg transition-all flex items-center justify-center gap-2 ${paymentMethod === 'card' ? 'bg-white text-primary shadow-sm font-bold border border-slate-100' : 'text-on-surface-variant hover:text-primary'}`}
+              className={`w-1/3 py-3 text-center rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer border-0 ${paymentMethod === 'card' ? 'bg-white text-primary shadow-sm font-bold border border-slate-100' : 'text-on-surface-variant hover:text-primary'}`}
             >
-              <CreditCard className="w-4 h-4" />
-              כרטיס אשראי
+              <CreditCard className="w-4 h-4 shrink-0" />
+              <span>כרטיס אשראי</span>
             </button>
             <button 
               onClick={() => { setPaymentMethod('gpay'); setError(null); }}
-              className={`w-1/2 py-3 text-center rounded-lg transition-all flex items-center justify-center gap-2 ${paymentMethod === 'gpay' ? 'bg-white text-primary shadow-sm font-bold border border-slate-100' : 'text-on-surface-variant hover:text-primary'}`}
+              className={`w-1/3 py-3 text-center rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer border-0 ${paymentMethod === 'gpay' ? 'bg-white text-primary shadow-sm font-bold border border-slate-100' : 'text-on-surface-variant hover:text-primary'}`}
             >
-              <Smartphone className="w-4 h-4" />
-              Google Pay
+              <Smartphone className="w-4 h-4 shrink-0" />
+              <span>Google Pay</span>
+            </button>
+            <button 
+              onClick={() => { setPaymentMethod('stripe'); setError(null); }}
+              className={`w-1/3 py-3 text-center rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer border-0 ${paymentMethod === 'stripe' ? 'bg-indigo-650 bg-indigo-600 text-white font-bold shadow-md' : 'text-on-surface-variant hover:text-primary'}`}
+            >
+              <span className="material-symbols-outlined text-sm font-bold shrink-0">payments</span>
+              <span>Stripe</span>
             </button>
           </div>
 
@@ -314,7 +342,7 @@ export default function CheckoutPage() {
                 {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : (isFemale ? `שלמי ${priceLabel} חודשי` : `שלם ${priceLabel} חודשי`)}
               </button>
             </form>
-          ) : (
+          ) : paymentMethod === 'gpay' ? (
             /* 📱 Google Pay simulated checkout */
             <div className="space-y-6 py-6 text-center">
               <div className="max-w-xs mx-auto p-6 border border-slate-100 rounded-2xl bg-slate-50/50 flex flex-col items-center">
@@ -342,6 +370,29 @@ export default function CheckoutPage() {
                     </svg>
                     <span>{isFemale ? 'שלמי באמצעות Google Pay' : 'שלם באמצעות Google Pay'}</span>
                   </>
+                )}
+              </button>
+            </div>
+          ) : (
+            /* 🔗 Stripe Gateway checkout */
+            <div className="space-y-6 py-6 text-center animate-in fade-in duration-300">
+              <div className="max-w-xs mx-auto p-6 border border-slate-100 rounded-2xl bg-indigo-50/50 flex flex-col items-center">
+                <span className="material-symbols-outlined text-4xl text-indigo-500 mb-2">payments</span>
+                <h4 className="font-bold text-primary mb-1 text-sm">מעבר מאובטח לסליקה ב-Stripe</h4>
+                <p className="text-on-surface-variant text-[11px] leading-relaxed">
+                  הינך מועבר לדף התשלום הרשמי והמאובטח של Stripe להשלמת העסקה.
+                </p>
+              </div>
+
+              <button
+                onClick={handleStripeRedirect}
+                disabled={loading}
+                className="w-full max-w-sm mx-auto py-4 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform active:scale-[0.98] flex items-center justify-center gap-2.5 shadow-lg shadow-indigo-600/20 cursor-pointer text-base border-0"
+              >
+                {loading ? (
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                ) : (
+                  <span>המשך ל-Stripe Checkout 💳</span>
                 )}
               </button>
             </div>

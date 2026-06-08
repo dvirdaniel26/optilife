@@ -239,9 +239,11 @@ export default function Navbar({ toggleSidebar }) {
                   ? 'צוות מקצועי • מנהל 🍏' 
                   : profile?.role === 'admin' 
                     ? 'מנהל מערכת 🛡️'  
-                    : isPremium 
-                      ? (profile?.gender === 'female' ? 'משתמשת Premium 👑' : 'משתמש Premium 👑') 
-                      : 'מסלול חינמי'}
+                    : profile?.subscription_tier === 'ai_ultimate'
+                      ? (profile?.gender === 'female' ? 'משתמשת AI Ultimate ⚡' : 'משתמש AI Ultimate ⚡')
+                      : isPremium 
+                        ? (profile?.gender === 'female' ? 'משתמשת Premium 👑' : 'משתמש Premium 👑') 
+                        : 'מסלול חינמי'}
               </p>
             </div>
             <span className={`material-symbols-outlined text-slate-400 text-lg transition-transform duration-300 ${isProfileOpen ? 'rotate-180 text-secondary' : 'group-hover:text-slate-600'}`}>

@@ -1,14 +1,64 @@
-import { useContext } from 'react';
+import { useContext, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { UserContext } from '../../App';
+import { supabase } from '../../lib/supabase';
 
 export default function Sidebar({ isOpen, closeSidebar }) {
-  const { profile, isPremium } = useContext(UserContext);
+  const { profile, isPremium, coachViewMode } = useContext(UserContext);
   const location = useLocation();
   const currentPath = location.pathname;
 
   const isActive = (path) => currentPath === path;
-  const isCoachOrAdmin = profile?.role === 'coach' || profile?.role === 'admin';
+  const isCoachOrAdmin = (profile?.role === 'coach' || profile?.role === 'admin') && coachViewMode !== 'user';
+  const isRealCoachOrAdmin = profile?.role === 'coach' || profile?.role === 'admin';
+
+  const [unreadTicketsCount, setUnreadTicketsCount] = useState(0);
+  const [clientUnreadCount, setClientUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!profile?.id) return;
+
+    const fetchTicketsCount = async () => {
+      try {
+        if (isRealCoachOrAdmin) {
+          const { count, error } = await supabase
+            .from('support_tickets')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'open');
+          
+          if (!error) {
+            setUnreadTicketsCount(count || 0);
+          }
+        } else {
+          const { count, error } = await supabase
+            .from('support_tickets')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', profile.id)
+            .eq('status', 'replied');
+          
+          if (!error) {
+            setClientUnreadCount(count || 0);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching tickets count:", err);
+      }
+    };
+
+    fetchTicketsCount();
+
+    // Subscribe to changes in support_tickets table
+    const channel = supabase
+      .channel('sidebar-tickets-count')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'support_tickets' }, () => {
+        fetchTicketsCount();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile?.id, isRealCoachOrAdmin]);
 
   return (
     <aside className={`h-screen w-72 fixed right-0 top-0 z-40 bg-white custom-shadow flex flex-col py-xl space-y-xs transition-transform duration-300 md:translate-x-0 print:hidden ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
@@ -33,10 +83,17 @@ export default function Sidebar({ isOpen, closeSidebar }) {
             </Link>
             <Link 
               to="/support" 
-              className={`flex items-center gap-md px-xl py-sm transition-all ${isActive('/support') ? 'bg-secondary/5 text-secondary font-bold border-r-4 border-secondary' : 'text-on-surface-variant hover:text-secondary'}`}
+              className={`flex items-center justify-between px-xl py-sm transition-all ${isActive('/support') ? 'bg-secondary/5 text-secondary font-bold border-r-4 border-secondary' : 'text-on-surface-variant hover:text-secondary'}`}
             >
-              <span className="material-symbols-outlined">mail</span>
-              הודעות ופניות תמיכה
+              <div className="flex items-center gap-md">
+                <span className="material-symbols-outlined">mail</span>
+                <span>הודעות ופניות תמיכה</span>
+              </div>
+              {unreadTicketsCount > 0 && (
+                <span className="bg-rose-500 text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-black animate-pulse">
+                  {unreadTicketsCount}
+                </span>
+              )}
             </Link>
           </>
         ) : (
@@ -72,6 +129,20 @@ export default function Sidebar({ isOpen, closeSidebar }) {
                 שדרוג מנוי
               </Link>
             )}
+            <Link 
+              to="/support" 
+              className={`flex items-center justify-between px-xl py-sm transition-all ${isActive('/support') ? 'bg-secondary/5 text-secondary font-bold border-r-4 border-secondary' : 'text-on-surface-variant hover:text-secondary'}`}
+            >
+              <div className="flex items-center gap-md">
+                <span className="material-symbols-outlined">mail</span>
+                <span>הודעות ופניות תמיכה</span>
+              </div>
+              {clientUnreadCount > 0 && (
+                <span className="bg-rose-500 text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-black animate-pulse">
+                  {clientUnreadCount}
+                </span>
+              )}
+            </Link>
           </>
         )}
       </nav>

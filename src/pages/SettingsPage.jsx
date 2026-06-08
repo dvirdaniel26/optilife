@@ -6,7 +6,7 @@ import { User, Mail, CreditCard, ShieldAlert, Loader2, AlertCircle, ShieldCheck,
 import { useSearchParams, useNavigate } from 'react-router-dom';
 
 export default function SettingsPage() {
-  const { profile, session, setProfile, isPremium } = useContext(UserContext);
+  const { profile, session, setProfile, isPremium, coachViewMode, setCoachViewMode } = useContext(UserContext);
   const { addNotification } = useContext(NotificationsContext);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
@@ -528,6 +528,46 @@ export default function SettingsPage() {
           <h2 className="font-heading text-4xl text-primary font-bold mb-2">הגדרות חשבון</h2>
           <p className="text-on-surface-variant font-body text-lg">ניהול הפרופיל שלך, מנויים ואבטחה.</p>
         </div>
+
+        {/* 🔄 כפתור החלפת תצוגה למאמנים / אדמינים */}
+        {isCoachOrAdmin && (
+          <div className="bg-gradient-to-r from-secondary/15 to-primary/5 border border-secondary/20 rounded-2xl p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 animate-in fade-in duration-300">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-secondary/15 text-secondary flex items-center justify-center shrink-0 shadow-sm">
+                <span className="material-symbols-outlined text-2xl font-bold">
+                  {coachViewMode === 'user' ? 'supervised_user_circle' : 'account_circle'}
+                </span>
+              </div>
+              <div className="text-right">
+                <h4 className="font-heading text-lg font-bold text-primary">מצב תצוגת מערכת 🔄</h4>
+                <p className="text-xs text-on-surface-variant leading-relaxed mt-1">
+                  {coachViewMode === 'user'
+                    ? (isFemale ? 'את נמצאת כעת במצב תצוגת משתמש רגיל. תוכלי להשתמש בכל הפיצ\'רים של הלקוחות או לחזור לניהול המאמן.' : 'אתה נמצא כעת במצב תצוגת משתמש רגיל. תוכל להשתמש בכל הפיצ\'רים של הלקוחות או לחזור לניהול המאמן.')
+                    : (isFemale ? 'כמאמנת במערכת, את יכולה להחליף את מצב התצוגה לתצוגת משתמש רגיל על מנת להתנסות בכל התכונות (העלאת בדיקות, ניתוח מדדים, תוכנית בריאות ועוד).' : 'כמאמן במערכת, אתה יכול להחליף את מצב התצוגה לתצוגת משתמש רגיל על מנת להתנסות בכל התכונות (העלאת בדיקות, ניתוח מדדים, תוכנית בריאות ועוד).')}
+                </p>
+              </div>
+            </div>
+            <button 
+              onClick={() => {
+                const newMode = coachViewMode === 'user' ? 'coach' : 'user';
+                setCoachViewMode(newMode);
+                localStorage.setItem('optilife_coach_view', newMode);
+                addNotification({
+                  type: 'info',
+                  title: newMode === 'user' ? 'עברת לתצוגת משתמש 👤' : 'חזרת לתצוגת מאמן 🖥️',
+                  message: newMode === 'user' 
+                    ? (isFemale ? 'כעת כל תפריטי הלקוח פתוחים בפנייך.' : 'כעת כל תפריטי הלקוח פתוחים בפניך.')
+                    : 'חזרת לניהול פניות הלקוחות ולוח הבקרה של המאמנים.',
+                  link: '/settings'
+                });
+                navigate(newMode === 'user' ? '/dashboard' : '/coach');
+              }}
+              className="px-6 py-2.5 bg-secondary hover:bg-secondary/90 text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all text-xs whitespace-nowrap cursor-pointer border-0"
+            >
+              {coachViewMode === 'user' ? 'חזרה לתצוגת מאמן 🖥️' : 'מעבר לתצוגת משתמש 👤'}
+            </button>
+          </div>
+        )}
 
         {message && (
           <div className="p-4 bg-status-success/10 border border-status-success/20 rounded-xl text-status-success text-sm flex items-start gap-3 animate-in fade-in slide-in-from-top-2">

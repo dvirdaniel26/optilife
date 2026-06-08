@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 
 export default function Navbar({ toggleSidebar }) {
-  const { profile, isPremium } = useContext(UserContext);
+  const { profile, isPremium, coachViewMode, setCoachViewMode } = useContext(UserContext);
   const { notifications, unreadCount, addNotification, markAsRead, markAllAsRead, deleteNotification, clearAll } = useContext(NotificationsContext);
   
   const [isNotifOpen, setIsNotifOpen] = useState(false);
@@ -279,6 +279,31 @@ export default function Navbar({ toggleSidebar }) {
                     <span className="material-symbols-outlined text-slate-400 text-lg">help</span>
                     <span>עזרה ותמיכה</span>
                   </button>
+                  {(profile?.role === 'coach' || profile?.role === 'admin') && (
+                    <button 
+                      onClick={() => {
+                        const newMode = coachViewMode === 'user' ? 'coach' : 'user';
+                        setCoachViewMode(newMode);
+                        localStorage.setItem('optilife_coach_view', newMode);
+                        addNotification({
+                          type: 'info',
+                          title: newMode === 'user' ? 'עברת לתצוגת משתמש 👤' : 'חזרת לתצוגת מאמן 🖥️',
+                          message: newMode === 'user' 
+                            ? (profile?.gender === 'female' ? 'כעת כל תפריטי הלקוח פתוחים בפניייך.' : 'כעת כל תפריטי הלקוח פתוחים בפניך.')
+                            : 'חזרת לניהול פניות הלקוחות ולוח הבקרה של המאמנים.',
+                          link: '/settings'
+                        });
+                        setIsProfileOpen(false);
+                        navigate(newMode === 'user' ? '/dashboard' : '/coach');
+                      }}
+                      className="w-full px-md py-2.5 text-xs font-bold text-secondary hover:bg-slate-50 transition-all flex items-center gap-md justify-start cursor-pointer border-0"
+                    >
+                      <span className="material-symbols-outlined text-secondary text-lg">
+                        {coachViewMode === 'user' ? 'supervised_user_circle' : 'account_circle'}
+                      </span>
+                      <span>{coachViewMode === 'user' ? 'חזרה לתצוגת מאמן 🖥️' : 'מעבר לתצוגת משתמש 👤'}</span>
+                    </button>
+                  )}
                 </div>
                 <div className="py-1">
                   <button 
@@ -333,6 +358,38 @@ export default function Navbar({ toggleSidebar }) {
               <span className="material-symbols-outlined">close</span>
             </button>
           </div>
+
+          {/* Toggle Mode for Coach/Admin */}
+          {(profile?.role === 'coach' || profile?.role === 'admin') && (
+            <div className="bg-slate-50 border-b border-slate-100 p-4 flex justify-between items-center gap-3 animate-in fade-in duration-200">
+              <div className="text-right">
+                <p className="text-xs font-bold text-primary">מצב תצוגת מערכת 🔄</p>
+                <p className="text-[10px] text-slate-500">
+                  {coachViewMode === 'user' ? 'תצוגת משתמש (בדיקות, מדדים, תוכנית בריאות)' : 'תצוגת מאמן (ניהול לקוחות, פניות תמיכה)'}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  const newMode = coachViewMode === 'user' ? 'coach' : 'user';
+                  setCoachViewMode(newMode);
+                  localStorage.setItem('optilife_coach_view', newMode);
+                  addNotification({
+                    type: 'info',
+                    title: newMode === 'user' ? 'עברת לתצוגת משתמש 👤' : 'חזרת לתצוגת מאמן 🖥️',
+                    message: newMode === 'user' 
+                      ? (profile?.gender === 'female' ? 'כעת כל תפריטי הלקוח פתוחים בפנייך.' : 'כעת כל תפריטי הלקוח פתוחים בפניך.')
+                      : 'חזרת לניהול פניות הלקוחות ולוח הבקרה של המאמנים.',
+                    link: '/settings'
+                  });
+                  setIsSupportModalOpen(false);
+                  navigate(newMode === 'user' ? '/dashboard' : '/coach');
+                }}
+                className="px-4 py-2 bg-secondary hover:bg-secondary/90 text-white font-bold rounded-xl text-[11px] transition-all cursor-pointer border-0 shadow-sm whitespace-nowrap active:scale-95"
+              >
+                {coachViewMode === 'user' ? 'חזרה לתצוגת מאמן 🖥️' : 'מעבר לתצוגת משתמש 👤'}
+              </button>
+            </div>
+          )}
 
           {/* Content Tabs (FAQ & Contact Us) */}
           <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">

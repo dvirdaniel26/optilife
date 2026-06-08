@@ -65,6 +65,9 @@ export default function App() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showSuspendedModal, setShowSuspendedModal] = useState(false);
+  const [coachViewMode, setCoachViewMode] = useState(
+    localStorage.getItem('optilife_coach_view') || 'coach'
+  );
   const [isRecoveryActive, setIsRecoveryActive] = useState(
     window.location.hash.includes('type=recovery') || window.location.search.includes('type=recovery')
   );
@@ -242,9 +245,10 @@ export default function App() {
   // Developer bypass flag for MFA lockouts in local development
   const mfaBypass = localStorage.getItem('optilife_mfa_bypass') === 'true';
   const shouldShowAuth = !session || isRecovery || isRecoveryActive || (isMfaPending && !mfaBypass);
+  const isCoachOrAdmin = (profile?.role === 'coach' || profile?.role === 'admin') && coachViewMode !== 'user';
 
   return (
-    <UserContext.Provider value={{ session, profile, setProfile, isPremium }}>
+    <UserContext.Provider value={{ session, profile, setProfile, isPremium, coachViewMode, setCoachViewMode }}>
       <NotificationsProvider session={session}>
         <BrowserRouter>
           <ScrollToTop />
@@ -258,7 +262,7 @@ export default function App() {
               <Route 
                 path="/dashboard" 
                 element={
-                  (profile?.role === 'coach' || profile?.role === 'admin') 
+                  isCoachOrAdmin 
                     ? <Navigate to="/coach" replace /> 
                     : <OverviewPage />
                 } 
@@ -266,7 +270,7 @@ export default function App() {
               <Route 
                 path="/upload" 
                 element={
-                  (profile?.role === 'coach' || profile?.role === 'admin') 
+                  isCoachOrAdmin 
                     ? <Navigate to="/coach" replace /> 
                     : <TestAnalysisPage />
                 } 
@@ -274,7 +278,7 @@ export default function App() {
               <Route 
                 path="/analysis" 
                 element={
-                  (profile?.role === 'coach' || profile?.role === 'admin') 
+                  isCoachOrAdmin 
                     ? <Navigate to="/coach" replace /> 
                     : <AnalysisResultsPage />
                 } 
@@ -282,7 +286,7 @@ export default function App() {
               <Route 
                 path="/pricing" 
                 element={
-                  (profile?.role === 'coach' || profile?.role === 'admin') 
+                  isCoachOrAdmin 
                     ? <Navigate to="/coach" replace /> 
                     : <PricingPage />
                 } 
@@ -290,7 +294,7 @@ export default function App() {
               <Route 
                 path="/notifications" 
                 element={
-                  (profile?.role === 'coach' || profile?.role === 'admin') 
+                  isCoachOrAdmin 
                     ? <Navigate to="/coach" replace /> 
                     : <NotificationsPage />
                 } 
@@ -311,7 +315,7 @@ export default function App() {
               <Route 
                 path="/plan" 
                 element={
-                  (profile?.role === 'coach' || profile?.role === 'admin') 
+                  isCoachOrAdmin 
                     ? <Navigate to="/coach" replace /> 
                     : <ActionPlanPage />
                 } 

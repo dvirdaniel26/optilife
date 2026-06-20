@@ -1,0 +1,82 @@
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', ['POST']);
+    return res.status(405).json({ error: 'Method Not Allowed' });
+  }
+
+  const apiKey = process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return res.status(500).json({ error: 'Gemini API key is not configured on Vercel.' });
+  }
+
+  try {
+    const { query, profile, abnormalMarkers, history } = req.body;
+
+    if (!query) {
+      return res.status(400).json({ error: 'Missing query parameter.' });
+    }
+
+        const first_name = profile?.first_name || 'אורח/ת';
+    const systemInstruction = `
+      You are a friendly, encouraging, and highly professional personal health coach and clinical dietitian named "AI Health Coach" for the platform OptiLife.
+      The user's name is ${first_name}.
+      
+      User's key details:
+      Gender: ${profile?.gender || 'not specified'}
+      Weight: ${profile?.weight || 'not specified'} kg
+      Height: ${profile?.height || 'not specified'} cm
+      
+      Abnormal or out-of-range lab blood test markers identified for this user:
+      ${abnormalMarkers && abnormalMarkers.length > 0 
+        ? JSON.stringify(abnormalMarkers.map(m => `${m.marker_name}: ${m.measured_value} ${m.unit || ''}`), null, 2)
+        : 'None (All markers are in normal ranges).'}
+      
+      Your goal is to guide the user in improving their health, diet, fitness, and lifestyle based on their specific health status and out-of-range markers.
+      
+      CRITICAL GUIDELINES:
+      1. Keep your tone supportive, professional, and empathetic.
+      2. Respond strictly in HEBREW (עברית).
+      3. Use markdown bolding (like **important text**) for readability.
+      4. Always include a disclaimer that your advice is for educational purposes only and they should consult a physician.
+      5. Keep responses concise and focused (max 150-250 words per message). Do not make them overly long.
+    `;
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ 
+      model: 'gemini-2.5-flash',
+      systemInstruction: systemInstruction
+    });
+
+    // Format chat history for Gemini API. 
+    // Gemini chat API expects format: { role: 'user' | 'model', parts: [{ text: '...' }] }
+    const formattedHistory = [];
+    if (history && Array.isArray(history)) {
+      history.forEach(msg => {
+        const role = msg.sender === 'user' ? 'user' : 'model';
+        // Exclude the initial welcome message from the strict history array to avoid cluttering, 
+        // since we pass system instructions about abnormal markers separately anyway.
+        if (msg.id !== 'welcome') {
+          formattedHistory.push({
+            role: role,
+            parts: [{ text: msg.text }]
+          });
+        }
+      });
+    }
+
+    const chat = model.startChat({
+      history: formattedHistory
+    });
+
+    const result = await chat.sendMessage(query);
+    const response = await result.response;
+    const responseText = response.text();
+
+    return res.status(200).json({ reply: responseText });
+  } catch (error) {
+    console.error('Vercel Gemini Coach Chat Serverless function error:', error);
+    return res.status(500).json({ error: error.message || 'Internal Server Error' });
+  }
+}

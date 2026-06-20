@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useCallback } from 'react';
+import { useState, useEffect, createContext, useCallback, useContext } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar/Sidebar';
 import Navbar from './components/Navbar/Navbar';
@@ -17,14 +17,18 @@ import SettingsPage from './pages/SettingsPage';
 import ActionPlanPage from './pages/ActionPlanPage';
 import CheckoutPage from './pages/CheckoutPage';
 import NotificationsPage from './pages/NotificationsPage';
-import CoachDashboard from './pages/CoachDashboard';
-import SupportInboxPage from './pages/SupportInboxPage';
 import AiCoachPage from './pages/AiCoachPage';
+import WellnessHubPage from './pages/WellnessHubPage';
+import AllTestsPage from './pages/AllTestsPage';
 
 export const UserContext = createContext();
 
 function Layout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { pathname } = useLocation();
+  const { profile, isAiUltimate } = useContext(UserContext);
+
+  const showActiveChat = pathname === '/ai-coach' && isAiUltimate && profile?.has_consented_to_ai_coach;
 
   return (
     <div className="text-on-surface bg-background min-h-screen font-body" dir="rtl">
@@ -39,7 +43,7 @@ function Layout() {
       <Sidebar isOpen={isSidebarOpen} closeSidebar={() => setIsSidebarOpen(false)} />
       <Navbar toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
       <Outlet />
-      <Footer />
+      {!showActiveChat && <Footer />}
     </div>
   );
 }
@@ -66,9 +70,12 @@ export default function App() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showSuspendedModal, setShowSuspendedModal] = useState(false);
-  const [coachViewMode, setCoachViewMode] = useState(
-    localStorage.getItem('optilife_coach_view') || 'coach'
-  );
+  
+  useEffect(() => {
+    window.supabase = supabase;
+  }, []);
+
+  // Coach dashboard views removed
   const [isRecoveryActive, setIsRecoveryActive] = useState(
     window.location.hash.includes('type=recovery') || window.location.search.includes('type=recovery')
   );
@@ -143,12 +150,24 @@ export default function App() {
           
         if (error && error.code === 'PGRST116') {
           // Profile not found, let's create it using the metadata from Auth
+          const meta = session?.user?.user_metadata;
+          let firstName = meta?.first_name || meta?.given_name || '';
+          let lastName = meta?.last_name || meta?.family_name || '';
+          
+          // Fallback parsing if first/last name are missing but full name exists
+          if (!firstName && !lastName && (meta?.name || meta?.full_name)) {
+            const fullNameStr = meta.name || meta.full_name || '';
+            const nameParts = fullNameStr.trim().split(/\s+/);
+            firstName = nameParts[0] || '';
+            lastName = nameParts.slice(1).join(' ') || '';
+          }
+
           const { data: newProfile, error: insertError } = await supabase
             .from('profiles')
             .insert([{
               id: session.user.id,
-              first_name: session.user.user_metadata?.first_name || '',
-              last_name: session.user.user_metadata?.last_name || '',
+              first_name: firstName,
+              last_name: lastName,
             }])
             .select()
             .single();
@@ -178,8 +197,9 @@ export default function App() {
 
   // Auto-downgrade expired cancelled subscriptions in background
   useEffect(() => {
-    if (profile?.subscription_tier?.startsWith('premium_cancelled:')) {
-      const endDateStr = profile.subscription_tier.split(':')[1];
+    const tier = profile?.subscription_tier;
+    if (tier?.startsWith('premium_cancelled:') || tier?.startsWith('ai_ultimate_cancelled:') || tier?.startsWith('standard_cancelled:')) {
+      const endDateStr = tier.split(':')[1];
       const endDate = new Date(endDateStr);
       const today = new Date();
       today.setHours(0,0,0,0);
@@ -195,7 +215,7 @@ export default function App() {
             if (error) throw error;
             setProfile(prev => ({ ...prev, subscription_tier: 'free' }));
           } catch (e) {
-            console.error("Error auto-downgrading expired premium subscription:", e);
+            console.error("Error auto-downgrading expired subscription:", e);
           }
         };
         downgradeUser();
@@ -215,8 +235,24 @@ export default function App() {
   const getPremiumStatus = (prof) => {
     if (!prof) return false;
     const tier = prof.subscription_tier;
-    if (tier === 'premium' || tier === 'ai_ultimate') return true;
-    if (tier?.startsWith('premium_cancelled:')) {
+    if (tier === 'premium' || tier === 'ai_ultimate' || tier === 'standard') return true;
+    if (tier?.startsWith('premium_cancelled:') || tier?.startsWith('ai_ultimate_cancelled:') || tier?.startsWith('standard_cancelled:')) {
+      const endDateStr = tier.split(':')[1];
+      const endDate = new Date(endDateStr);
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      endDate.setHours(23,59,59,999);
+      return endDate >= today; // Still active!
+    }
+    return false;
+  };
+
+  // Calculate global isAiUltimate status
+  const getAiUltimateStatus = (prof) => {
+    if (!prof) return false;
+    const tier = prof.subscription_tier;
+    if (tier === 'ai_ultimate') return true;
+    if (tier?.startsWith('ai_ultimate_cancelled:')) {
       const endDateStr = tier.split(':')[1];
       const endDate = new Date(endDateStr);
       const today = new Date();
@@ -228,6 +264,7 @@ export default function App() {
   };
 
   const isPremium = getPremiumStatus(profile);
+  const isAiUltimate = getAiUltimateStatus(profile);
 
   // Calculate recovery and MFA pending states to enforce login page constraints
   const isRecovery = window.location.hash.includes('type=recovery') || window.location.search.includes('type=recovery');
@@ -246,11 +283,9 @@ export default function App() {
   // Developer bypass flag for MFA lockouts in local development
   const mfaBypass = localStorage.getItem('optilife_mfa_bypass') === 'true';
   const shouldShowAuth = !session || isRecovery || isRecoveryActive || (isMfaPending && !mfaBypass);
-  const isCoachOrAdmin = (profile?.role === 'coach' || profile?.role === 'admin') && coachViewMode !== 'user';
-
   return (
-    <UserContext.Provider value={{ session, profile, setProfile, isPremium, coachViewMode, setCoachViewMode }}>
-      <NotificationsProvider session={session}>
+    <UserContext.Provider value={{ session, profile, setProfile, isPremium, isAiUltimate }}>
+      <NotificationsProvider session={session} profile={profile} isPremium={isPremium}>
         <BrowserRouter>
           <ScrollToTop />
           <Routes>
@@ -260,76 +295,16 @@ export default function App() {
             
             {/* Protected Routes */}
             <Route element={(session && (!isMfaPending || mfaBypass)) ? <Layout /> : <Navigate to="/auth" replace />}>
-              <Route 
-                path="/dashboard" 
-                element={
-                  isCoachOrAdmin 
-                    ? <Navigate to="/coach" replace /> 
-                    : <OverviewPage />
-                } 
-              />
-              <Route 
-                path="/upload" 
-                element={
-                  isCoachOrAdmin 
-                    ? <Navigate to="/coach" replace /> 
-                    : <TestAnalysisPage />
-                } 
-              />
-              <Route 
-                path="/analysis" 
-                element={
-                  isCoachOrAdmin 
-                    ? <Navigate to="/coach" replace /> 
-                    : <AnalysisResultsPage />
-                } 
-              />
-              <Route 
-                path="/pricing" 
-                element={
-                  isCoachOrAdmin 
-                    ? <Navigate to="/coach" replace /> 
-                    : <PricingPage />
-                } 
-              />
-              <Route 
-                path="/notifications" 
-                element={
-                  isCoachOrAdmin 
-                    ? <Navigate to="/coach" replace /> 
-                    : <NotificationsPage />
-                } 
-              />
+              <Route path="/dashboard" element={<OverviewPage />} />
+              <Route path="/upload" element={<TestAnalysisPage />} />
+              <Route path="/analysis" element={<AnalysisResultsPage />} />
+              <Route path="/tests" element={<AllTestsPage />} />
+              <Route path="/pricing" element={<PricingPage />} />
+              <Route path="/notifications" element={<NotificationsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
-              
-              {/* Coach Dashboard - protected by role */}
-              <Route 
-                path="/coach" 
-                element={
-                  (profile?.role === 'coach' || profile?.role === 'admin') 
-                    ? <CoachDashboard /> 
-                    : <Navigate to="/dashboard" replace />
-                } 
-              />
-              
-              {/* Placeholder routes for links in the sidebar */}
-              <Route 
-                path="/plan" 
-                element={
-                  isCoachOrAdmin 
-                    ? <Navigate to="/coach" replace /> 
-                    : <ActionPlanPage />
-                } 
-              />
-              <Route 
-                path="/ai-coach" 
-                element={
-                  isCoachOrAdmin 
-                    ? <Navigate to="/coach" replace /> 
-                    : <AiCoachPage />
-                } 
-              />
-              <Route path="/support" element={<SupportInboxPage />} />
+              <Route path="/plan" element={<ActionPlanPage />} />
+              <Route path="/ai-coach" element={<AiCoachPage />} />
+              <Route path="/wellness" element={<WellnessHubPage />} />
               <Route path="/help" element={<main className="md:pr-72 pt-24 min-h-screen p-xl"><h1 className="text-2xl font-bold text-primary">עזרה ותמיכה - בקרוב</h1></main>} />
             </Route>
             

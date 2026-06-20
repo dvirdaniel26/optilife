@@ -3,11 +3,12 @@ import { supabase } from '../lib/supabase';
 
 export const NotificationsContext = createContext();
 
-export function NotificationsProvider({ children, session }) {
+export function NotificationsProvider({ children, session, profile, isPremium }) {
   const [notifications, setNotifications] = useState([]);
   const [hasDbTable, setHasDbTable] = useState(null); // null = unknown, true = exists, false = fallback
   const userId = session?.user?.id;
   const loadedUserIdRef = useRef(null);
+  const automatedCheckedRef = useRef(false);
 
   // Fetch or initialize notifications
   useEffect(() => {
@@ -62,6 +63,98 @@ export function NotificationsProvider({ children, session }) {
 
       // Mark notifications as fully loaded for this specific user ID
       loadedUserIdRef.current = userId;
+
+      // 💡 AUTOMATED NOTIFICATIONS LOGIC
+      if (!automatedCheckedRef.current && isPremium && profile) {
+        automatedCheckedRef.current = true;
+        
+        // 1. Check if premium user hasn't uploaded a test
+        const checkMissingTest = async () => {
+          try {
+            const { data, error } = await supabase
+              .from('blood_tests')
+              .select('id')
+              .eq('user_id', userId)
+              .limit(1);
+            
+            if (!error && (!data || data.length === 0)) {
+              // User has no tests, let's see if we already notified them
+              const hasNotified = setNotifications => {
+                // We don't have direct access to the latest state here easily without using functional updates, 
+                // but we can query DB directly or check the current local state.
+              };
+              
+              const { data: existing } = await supabase
+                .from('notifications')
+                .select('id')
+                .eq('user_id', userId)
+                .eq('type', 'warning')
+                .like('title', '%לא העלית%');
+              
+              if (!existing || existing.length === 0) {
+                // Dispatch notification
+                const newNotif = {
+                  id: 'notif_missing_test_' + Date.now(),
+                  user_id: userId,
+                  type: 'warning',
+                  title: 'חסרה בדיקת דם לניתוח ⚠️',
+                  message: 'יש לך מנוי פעיל, אך טרם העלית בדיקת דם. על מנת שנוכל להתאים לך תוכנית אישית, אנא העלה בדיקה עכשיו.',
+                  link: '/upload',
+                  is_read: false,
+                  created_at: new Date().toISOString()
+                };
+                
+                // insert to DB and update state
+                await supabase.from('notifications').insert([newNotif]);
+                setNotifications(prev => [newNotif, ...prev]);
+              }
+            }
+          } catch(e) {
+            console.error(e);
+          }
+        };
+
+        // 2. Check for active health challenges
+        const checkActiveChallenges = async () => {
+          try {
+            const { data: challenges, error } = await supabase
+              .from('health_challenges')
+              .select('*')
+              .eq('status', 'active');
+            
+            if (!error && challenges && challenges.length > 0) {
+              const activeChallenge = challenges[0];
+              // Check if already notified
+              const { data: existing } = await supabase
+                .from('notifications')
+                .select('id')
+                .eq('user_id', userId)
+                .eq('type', 'info')
+                .like('title', `%${activeChallenge.title}%`);
+              
+              if (!existing || existing.length === 0) {
+                 const newNotif = {
+                  id: 'notif_challenge_' + activeChallenge.id + '_' + Date.now(),
+                  user_id: userId,
+                  type: 'info',
+                  title: `אתגר בריאות חדש: ${activeChallenge.title} 🎯`,
+                  message: 'הצטרף עכשיו לאתגר הבריאות החדש שלנו ושפר את המדדים שלך יחד עם הקהילה!',
+                  link: '/wellness',
+                  is_read: false,
+                  created_at: new Date().toISOString()
+                };
+                await supabase.from('notifications').insert([newNotif]);
+                setNotifications(prev => [newNotif, ...prev]);
+              }
+            }
+          } catch(e) {
+             console.error(e);
+          }
+        };
+
+        checkMissingTest();
+        checkActiveChallenges();
+      }
     };
 
     loadNotifications();
@@ -91,7 +184,7 @@ export function NotificationsProvider({ children, session }) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId]);
+  }, [userId, profile, isPremium]);
 
   // Sync state to LocalStorage if we are in fallback mode, ONLY after notifications are successfully loaded for this user
   useEffect(() => {

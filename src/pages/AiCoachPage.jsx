@@ -366,7 +366,7 @@ export default function AiCoachPage() {
         </div>
       ) : (
         /* 💬 ACTIVE CHAT SCREEN FOR AI ULTIMATE SUBSCRIBERS */
-        <div className="p-sm md:p-md lg:p-xl max-w-5xl w-full mx-auto flex flex-col gap-md">
+        <div className="p-4 md:p-6 lg:p-8 max-w-7xl w-full mx-auto flex flex-col gap-6 flex-1 min-h-0 overflow-hidden" dir="rtl">
           
           {/* Header */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-sm pb-xs border-b border-outline-variant">
@@ -387,13 +387,13 @@ export default function AiCoachPage() {
             )}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-md items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start flex-1 min-h-0 overflow-hidden">
             
             {/* RIGHT COLUMN: Interactive Chat Area */}
-            <div className="lg:col-span-8 backdrop-blur-md bg-white/70 border border-white/20 rounded-3xl p-md flex flex-col gap-sm custom-shadow h-[580px]">
+            <div className="lg:col-span-8 bg-white border border-outline/10 rounded-3xl p-4 md:p-6 lg:p-8 flex flex-col gap-4 custom-shadow h-[600px] md:h-[700px] relative">
               
               {/* Messages History */}
-              <div className="flex-1 overflow-y-auto pr-xs flex flex-col gap-md">
+              <div className="flex-1 overflow-y-auto pr-2 flex flex-col gap-6 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
                 {dbLoading ? (
                   <div className="h-full flex flex-col items-center justify-center text-center text-slate-400 text-xs gap-sm">
                     <Loader2 className="w-8 h-8 animate-spin text-secondary" />
@@ -405,22 +405,22 @@ export default function AiCoachPage() {
                     return (
                       <div 
                         key={msg.id}
-                        className={`flex gap-sm items-start max-w-[85%] ${!isAi ? 'self-end flex-row-reverse text-left' : 'self-start text-right animate-fadeIn'}`}
+                        className={`flex gap-3 md:gap-4 items-start max-w-[95%] md:max-w-[85%] ${!isAi ? 'self-end flex-row-reverse text-left' : 'self-start text-right animate-fadeIn'}`}
                       >
                         {/* Avatar */}
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 border ${isAi ? 'bg-secondary/15 text-secondary border-secondary/20' : 'bg-slate-200 text-slate-500 border-slate-350'}`}>
-                          {isAi ? <Brain className="w-4.5 h-4.5" /> : <User className="w-4.5 h-4.5" />}
+                        <div className={`w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm ${isAi ? 'bg-gradient-to-br from-secondary to-teal-500 text-white' : 'bg-slate-100 text-slate-500 border border-slate-200'}`}>
+                          {isAi ? <Brain className="w-5 h-5 md:w-6 md:h-6" /> : <User className="w-5 h-5 md:w-6 md:h-6" />}
                         </div>
 
                         {/* Bubble */}
-                        <div className="flex flex-col gap-1">
-                          <span className={`text-[9px] font-bold ${!isAi ? 'text-secondary text-left pl-1' : 'text-slate-500'}`}>
+                        <div className="flex flex-col gap-1.5 min-w-0">
+                          <span className={`text-xs font-bold ${!isAi ? 'text-slate-500 text-left pl-1' : 'text-primary pr-1'}`}>
                             {isAi ? 'AI Health Coach' : (profile?.first_name || 'אני')}
                           </span>
-                          <div className={`px-md py-sm rounded-2xl text-xs text-right leading-relaxed shadow-sm border whitespace-pre-line ${!isAi ? 'bg-secondary text-white border-secondary/20 rounded-tl-none text-left' : 'bg-white border-slate-150 text-slate-700 rounded-tr-none'}`}>
+                          <div className={`px-5 py-4 rounded-[28px] text-sm md:text-base leading-relaxed shadow-sm whitespace-pre-line ${!isAi ? 'bg-secondary text-white rounded-tl-sm text-left shadow-secondary/20' : 'bg-slate-50 border border-slate-100 text-slate-700 rounded-tr-sm'}`}>
                             {renderMessageText(msg.text, isAi)}
                           </div>
-                          <span className={`text-[8px] text-slate-400 font-semibold ${!isAi ? 'self-end pl-1' : 'self-start pr-1'}`}>
+                          <span className={`text-[10px] text-slate-400 font-semibold mt-0.5 ${!isAi ? 'self-end pl-1' : 'self-start pr-1'}`}>
                             {msg.time}
                           </span>
                         </div>
@@ -433,7 +433,7 @@ export default function AiCoachPage() {
                 {isTyping && (
                   <div className="self-start flex gap-sm items-center text-right animate-pulse">
                     <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 border bg-secondary/15 text-secondary border-secondary/20">
-                      <Brain className="w-4.5 h-4.5" />
+                      <Brain className="w-5 h-5 md:w-6 md:h-6" />
                     </div>
                     <div className="flex flex-col gap-0.5">
                       <span className="text-[9px] font-bold text-slate-500">AI Health Coach</span>
@@ -453,28 +453,28 @@ export default function AiCoachPage() {
 
               {/* Quick Prompts Panel */}
               {!dbLoading && (
-                <div className="flex flex-wrap gap-xs pb-xs border-t border-slate-100/50 pt-2 overflow-x-auto whitespace-nowrap scrollbar-none">
+                <div className="flex flex-nowrap gap-2 pt-4 pb-2 border-t border-outline/10 overflow-x-auto scrollbar-none">
                   <button 
                     onClick={() => selectQuickPrompt('מה לאכול כדי לשפר את בדיקות הדם שלי?')}
-                    className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl text-[10px] font-bold transition-all border border-slate-200/60 cursor-pointer active:scale-95 shrink-0"
+                    className="px-4 py-2 bg-slate-50 hover:bg-secondary/5 text-slate-600 hover:text-secondary rounded-xl text-xs font-bold transition-all border border-slate-200 hover:border-secondary/30 cursor-pointer active:scale-95 shrink-0 whitespace-nowrap shadow-sm"
                   >
                     🍎 המלץ לי על ארוחת בוקר
                   </button>
                   <button 
                     onClick={() => selectQuickPrompt('איך מומלץ לאזן את רמת הסוכר והגלוקוז שלי?')}
-                    className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl text-[10px] font-bold transition-all border border-slate-200/60 cursor-pointer active:scale-95 shrink-0"
+                    className="px-4 py-2 bg-slate-50 hover:bg-secondary/5 text-slate-600 hover:text-secondary rounded-xl text-xs font-bold transition-all border border-slate-200 hover:border-secondary/30 cursor-pointer active:scale-95 shrink-0 whitespace-nowrap shadow-sm"
                   >
                     🍭 מדדי סוכר וגלוקוז
                   </button>
                   <button 
                     onClick={() => selectQuickPrompt('איך לאזן כולסטרול וכולסטרול LDL?')}
-                    className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl text-[10px] font-bold transition-all border border-slate-200/60 cursor-pointer active:scale-95 shrink-0"
+                    className="px-4 py-2 bg-slate-50 hover:bg-secondary/5 text-slate-600 hover:text-secondary rounded-xl text-xs font-bold transition-all border border-slate-200 hover:border-secondary/30 cursor-pointer active:scale-95 shrink-0 whitespace-nowrap shadow-sm"
                   >
                     🥩 הפחתת כולסטרול
                   </button>
                   <button 
                     onClick={() => selectQuickPrompt('מה לקחת ואיך נכון לספוג תוספי תזונה וויטמין D?')}
-                    className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl text-[10px] font-bold transition-all border border-slate-200/60 cursor-pointer active:scale-95 shrink-0"
+                    className="px-4 py-2 bg-slate-50 hover:bg-secondary/5 text-slate-600 hover:text-secondary rounded-xl text-xs font-bold transition-all border border-slate-200 hover:border-secondary/30 cursor-pointer active:scale-95 shrink-0 whitespace-nowrap shadow-sm"
                   >
                     💊 ויטמינים ותוספי תזונה
                   </button>
@@ -482,7 +482,7 @@ export default function AiCoachPage() {
               )}
 
               {/* Chat Input Field */}
-              <form onSubmit={handleSendMessage} className="flex gap-sm items-end border-t border-slate-100 pt-sm">
+              <form onSubmit={handleSendMessage} className="flex gap-3 items-end bg-slate-50 p-2 md:p-3 rounded-[28px] border border-slate-200 focus-within:border-secondary/50 focus-within:bg-white focus-within:ring-4 focus-within:ring-secondary/10 transition-all shadow-inner">
                 <textarea 
                   rows={2}
                   value={inputText}
@@ -496,12 +496,12 @@ export default function AiCoachPage() {
                   placeholder="שאל את ה-AI על בדיקות הדם, תפריט מומלץ או תוספי תזונה..."
                   required
                   disabled={dbLoading || isTyping}
-                  className="flex-1 px-sm py-2 bg-white border border-slate-200 rounded-2xl text-xs focus:outline-none focus:border-secondary leading-relaxed resize-none disabled:bg-slate-50"
+                  className="flex-1 px-4 py-3 md:py-3.5 bg-transparent text-sm focus:outline-none transition-all leading-relaxed resize-none disabled:opacity-50 text-right font-body min-h-[44px] max-h-[120px]" dir="rtl"
                 />
                 <button 
                   type="submit"
                   disabled={dbLoading || isTyping || !inputText.trim()}
-                  className="bg-secondary text-white font-bold p-3 rounded-2xl transition-all duration-200 flex items-center justify-center shrink-0 hover:shadow-lg active:scale-95 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed hover:bg-secondary/90 shadow-md cursor-pointer h-10 w-10 border-0"
+                  className="bg-secondary text-white font-bold rounded-2xl transition-all duration-200 flex items-center justify-center shrink-0 hover:shadow-lg hover:scale-105 active:scale-95 disabled:bg-slate-300 disabled:text-white disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none shadow-md cursor-pointer h-12 w-12 border-0"
                 >
                   <Send className="w-4 h-4 transform rotate-180" />
                 </button>
@@ -509,7 +509,7 @@ export default function AiCoachPage() {
             </div>
 
             {/* LEFT COLUMN: Health Coach Stats Card */}
-            <div className="lg:col-span-4 flex flex-col gap-md">
+            <div className="lg:col-span-4 flex flex-col gap-6">
               
               {/* AI Assistant Bio Card */}
               <div className="backdrop-blur-md bg-white/70 border border-white/20 rounded-3xl p-md custom-shadow flex flex-col gap-sm text-center">

@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 
 export default function Navbar({ toggleSidebar }) {
-  const { profile, isPremium, coachViewMode, setCoachViewMode } = useContext(UserContext);
+  const { profile, isPremium } = useContext(UserContext);
   const { notifications, unreadCount, addNotification, markAsRead, markAllAsRead, deleteNotification, clearAll } = useContext(NotificationsContext);
   
   const [isNotifOpen, setIsNotifOpen] = useState(false);
@@ -22,6 +22,19 @@ export default function Navbar({ toggleSidebar }) {
   const profileMenuRef = useRef(null);
 
   const fullName = profile ? `${profile.first_name} ${profile.last_name}` : 'משתמש/ת';
+
+  const getTierDisplayName = () => {
+    const tier = profile?.subscription_tier;
+    const isFemaleUser = profile?.gender === 'female';
+    if (tier === 'ai_ultimate') return isFemaleUser ? 'מנויה אולטימטיבי ⚡' : 'מנוי אולטימטיבי ⚡';
+    if (tier?.startsWith('ai_ultimate_cancelled:')) return isFemaleUser ? 'אולטימטיבי (מבוטל) ⚡' : 'אולטימטיבי (מבוטל) ⚡';
+    if (tier === 'premium') return isFemaleUser ? 'מנויה מקצועי 👑' : 'מנוי מקצועי 👑';
+    if (tier?.startsWith('premium_cancelled:')) return isFemaleUser ? 'מקצועי (מבוטל) 👑' : 'מקצועי (מבוטל) 👑';
+    if (tier === 'standard') return isFemaleUser ? 'מנויה מתקדם 🌟' : 'מנוי מתקדם 🌟';
+    if (tier?.startsWith('standard_cancelled:')) return isFemaleUser ? 'מתקדם (מבוטל) 🌟' : 'מתקדם (מבוטל) 🌟';
+    return 'מסלול בסיסי';
+  };
+
 
   // Click outside to close notifications dropdown
   useEffect(() => {
@@ -221,6 +234,7 @@ export default function Navbar({ toggleSidebar }) {
 
         <div className="h-8 w-[1px] bg-outline-variant mx-xs hidden sm:block"></div>
         
+        
         {/* Profile Dropdown Area */}
         <div className="relative" ref={profileMenuRef}>
           <button 
@@ -234,16 +248,8 @@ export default function Navbar({ toggleSidebar }) {
             />
             <div className="text-right hidden sm:block pr-1">
               <p className="text-sm font-bold text-primary leading-tight">{fullName}</p>
-              <p className={`text-[10px] font-extrabold uppercase tracking-wider ${profile?.role === 'coach' || profile?.role === 'admin' ? 'text-secondary' : (isPremium ? 'text-secondary' : 'text-on-surface-variant')} mt-0.5`}>
-                {profile?.role === 'coach' 
-                  ? 'צוות מקצועי • מנהל 🍏' 
-                  : profile?.role === 'admin' 
-                    ? 'מנהל מערכת 🛡️'  
-                    : profile?.subscription_tier === 'ai_ultimate'
-                      ? (profile?.gender === 'female' ? 'משתמשת AI Ultimate ⚡' : 'משתמש AI Ultimate ⚡')
-                      : isPremium 
-                        ? (profile?.gender === 'female' ? 'משתמשת Premium 👑' : 'משתמש Premium 👑') 
-                        : 'מסלול חינמי'}
+              <p className={`text-[10px] font-extrabold uppercase tracking-wider ${profile?.subscription_tier && profile.subscription_tier !== 'free' ? 'text-secondary' : 'text-on-surface-variant'} mt-0.5`}>
+                {getTierDisplayName()}
               </p>
             </div>
             <span className={`material-symbols-outlined text-slate-400 text-lg transition-transform duration-300 ${isProfileOpen ? 'rotate-180 text-secondary' : 'group-hover:text-slate-600'}`}>
@@ -255,14 +261,8 @@ export default function Navbar({ toggleSidebar }) {
             <div className="absolute left-0 mt-3 w-56 bg-white/95 backdrop-blur-md rounded-2xl custom-shadow border border-slate-100 z-50 overflow-hidden text-right animate-in fade-in slide-in-from-top-2 duration-200">
               <div className="p-md border-b border-slate-50 flex flex-col gap-0.5 sm:hidden bg-slate-50/30">
                 <p className="text-sm font-bold text-primary">{fullName}</p>
-                <p className={`text-[10px] font-extrabold uppercase tracking-wider ${profile?.role === 'coach' || profile?.role === 'admin' ? 'text-secondary' : (isPremium ? 'text-secondary' : 'text-on-surface-variant')}`}>
-                  {profile?.role === 'coach' 
-                    ? 'צוות מקצועי • מנהל 🍏' 
-                    : profile?.role === 'admin' 
-                      ? 'מנהל מערכת 🛡️' 
-                      : isPremium 
-                        ? (profile?.gender === 'female' ? 'מנויה Premium 👑' : 'מנוי Premium 👑') 
-                        : 'מסלול חינמי'}
+                <p className={`text-[10px] font-extrabold uppercase tracking-wider ${profile?.subscription_tier && profile.subscription_tier !== 'free' ? 'text-secondary' : 'text-on-surface-variant'}`}>
+                  {getTierDisplayName()}
                 </p>
               </div>
               <div className="py-2 divide-y divide-slate-100/80">
@@ -281,31 +281,7 @@ export default function Navbar({ toggleSidebar }) {
                     <span className="material-symbols-outlined text-slate-400 text-lg">help</span>
                     <span>עזרה ותמיכה</span>
                   </button>
-                  {(profile?.role === 'coach' || profile?.role === 'admin') && (
-                    <button 
-                      onClick={() => {
-                        const newMode = coachViewMode === 'user' ? 'coach' : 'user';
-                        setCoachViewMode(newMode);
-                        localStorage.setItem('optilife_coach_view', newMode);
-                        addNotification({
-                          type: 'info',
-                          title: newMode === 'user' ? 'עברת לתצוגת משתמש 👤' : 'חזרת לתצוגת מנהל 🖥️',
-                          message: newMode === 'user' 
-                            ? (profile?.gender === 'female' ? 'כעת כל תפריטי הלקוח פתוחים בפניייך.' : 'כעת כל תפריטי הלקוח פתוחים בפניך.')
-                            : 'חזרת לניהול פניות הלקוחות ולוח הבקרה של מנהלי המערכת.',
-                          link: '/settings'
-                        });
-                        setIsProfileOpen(false);
-                        navigate(newMode === 'user' ? '/dashboard' : '/coach');
-                      }}
-                      className="w-full px-md py-2.5 text-xs font-bold text-secondary hover:bg-slate-50 transition-all flex items-center gap-md justify-start cursor-pointer border-0"
-                    >
-                      <span className="material-symbols-outlined text-secondary text-lg">
-                        {coachViewMode === 'user' ? 'supervised_user_circle' : 'account_circle'}
-                      </span>
-                      <span>{coachViewMode === 'user' ? 'חזרה לתצוגת מנהל 🖥️' : 'מעבר לתצוגת משתמש 👤'}</span>
-                    </button>
-                  )}
+
                 </div>
                 <div className="py-1">
                   <button 
@@ -361,38 +337,6 @@ export default function Navbar({ toggleSidebar }) {
             </button>
           </div>
 
-          {/* Toggle Mode for Coach/Admin */}
-          {(profile?.role === 'coach' || profile?.role === 'admin') && (
-            <div className="bg-slate-50 border-b border-slate-100 p-4 flex justify-between items-center gap-3 animate-in fade-in duration-200">
-              <div className="text-right">
-                <p className="text-xs font-bold text-primary">מצב תצוגת מערכת 🔄</p>
-                <p className="text-[10px] text-slate-500">
-                  {coachViewMode === 'user' ? 'תצוגת משתמש (בדיקות, מדדים, תוכנית בריאות)' : 'תצוגת מנהל (ניהול לקוחות, פניות תמיכה)'}
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  const newMode = coachViewMode === 'user' ? 'coach' : 'user';
-                  setCoachViewMode(newMode);
-                  localStorage.setItem('optilife_coach_view', newMode);
-                  addNotification({
-                    type: 'info',
-                    title: newMode === 'user' ? 'עברת לתצוגת משתמש 👤' : 'חזרת לתצוגת מנהל 🖥️',
-                    message: newMode === 'user' 
-                      ? (profile?.gender === 'female' ? 'כעת כל תפריטי הלקוח פתוחים בפנייך.' : 'כעת כל תפריטי הלקוח פתוחים בפניך.')
-                      : 'חזרת לניהול פניות הלקוחות ולוח הבקרה של מנהלי המערכת.',
-                    link: '/settings'
-                  });
-                  setIsSupportModalOpen(false);
-                  navigate(newMode === 'user' ? '/dashboard' : '/coach');
-                }}
-                className="px-4 py-2 bg-secondary hover:bg-secondary/90 text-white font-bold rounded-xl text-[11px] transition-all cursor-pointer border-0 shadow-sm whitespace-nowrap active:scale-95"
-              >
-                {coachViewMode === 'user' ? 'חזרה לתצוגת מנהל 🖥️' : 'מעבר לתצוגת משתמש 👤'}
-              </button>
-            </div>
-          )}
-
           {/* Content Tabs (FAQ & Contact Us) */}
           <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
             
@@ -425,11 +369,11 @@ export default function Navbar({ toggleSidebar }) {
 
               <details className="group border border-slate-100 rounded-xl p-3 bg-slate-50/50 hover:bg-slate-50 transition-colors">
                 <summary className="font-bold text-xs text-primary cursor-pointer flex justify-between items-center select-none">
-                  <span>כיצד ניתן לבטל את מנוי הפרימיום?</span>
+                  <span>כיצד ניתן לבטל את המנוי?</span>
                   <span className="material-symbols-outlined text-xs group-open:rotate-180 transition-transform">expand_more</span>
                 </summary>
                 <p className="text-xs text-on-surface-variant leading-relaxed mt-2 pl-4">
-                  תוכל לבטל את מנוי הפרימיום שלך בכל עת דרך עמוד <span className="font-bold">"הגדרות חשבון"</span> תחת כרטיסיית המנוי בצד שמאל, על ידי לחיצה על כפתור <span className="font-bold">"ביטול מנוי"</span>. החשבון יוחזר מיידית למסלול החינמי.
+                  תוכל לבטל את המנוי המשודרג שלך בכל עת דרך עמוד <span className="font-bold">"הגדרות חשבון"</span> תחת כרטיסיית המנוי בצד שמאל, על ידי לחיצה על כפתור <span className="font-bold">"ביטול מנוי"</span>. החשבון יוחזר מיידית למסלול הבסיסי.
                 </p>
               </details>
             </div>
@@ -453,7 +397,7 @@ export default function Navbar({ toggleSidebar }) {
                     <option value="תקלה טכנית או שגיאה באתר">תקלה טכנית או שגיאה באתר</option>
                     <option value="שאלה לגבי פענוח בדיקות דם">שאלה לגבי פענוח בדיקות דם</option>
                     <option value="ייעוץ תזונתי או תפריט בריאות">ייעוץ תזונתי או תפריט בריאות</option>
-                    <option value="מנויים, תשלומים ושדרוג פרימיום">מנויים, תשלומים ושדרוג פרימיום</option>
+                    <option value="מנויים, תשלומים ושדרוג מנוי">מנויים, תשלומים ושדרוג מנוי</option>
                     <option value="אחר">אחר</option>
                   </select>
                 </div>
@@ -492,14 +436,13 @@ export default function Navbar({ toggleSidebar }) {
                         addNotification({
                           type: 'success',
                           title: 'פנייתך התקבלה בהצלחה! 📩',
-                          message: `נושא: ${supportSubject}. פנייתך נרשמה בהצלחה במערכת ותיענה על ידי מנהלי המערכת בהקדם. תוכל לעקוב אחריה בדף פניות ותמיכה.`,
-                          link: '/support'
+                          message: `נושא: ${supportSubject}. פנייתך נרשמה בהצלחה במערכת ותיענה על ידי צוות התמיכה שלנו במייל בהקדם.`,
+                          link: '/dashboard'
                         });
 
                         setIsSupportModalOpen(false);
                         setSupportSubject('');
                         setSupportMessage('');
-                        navigate('/support');
                       } catch (err) {
                         console.error('Error submitting support ticket:', err);
                         // Fallback notification if DB insert fails (e.g. before SQL table is created)

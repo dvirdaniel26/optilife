@@ -29,3 +29,6 @@ dist-ssr
 scratch_models.js
 
 
+
+.vercel
+.env*

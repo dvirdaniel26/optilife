@@ -12,9 +12,15 @@ export default function CheckoutPage() {
   const location = useLocation();
   const isFemale = profile?.gender === 'female';
 
-  const selectedPlan = location.state?.plan === 'ai_ultimate' ? 'ai_ultimate' : 'premium';
-  const priceLabel = selectedPlan === 'ai_ultimate' ? '₪49.00' : '₪29.00';
-  const planNameHebrew = selectedPlan === 'ai_ultimate' ? 'OptiLife AI Ultimate 🧠' : 'OptiLife Premium 👑';
+  const selectedPlan = location.state?.plan === 'ai_ultimate' 
+    ? 'ai_ultimate' 
+    : (location.state?.plan === 'standard' ? 'standard' : 'premium');
+  const priceLabel = selectedPlan === 'ai_ultimate' 
+    ? '₪49.00' 
+    : (selectedPlan === 'standard' ? '₪19.00' : '₪29.00');
+  const planNameHebrew = selectedPlan === 'ai_ultimate' 
+    ? 'OptiLife אולטימטיבי 🧠' 
+    : (selectedPlan === 'standard' ? 'OptiLife מתקדם ⚡' : 'OptiLife מקצועי 👑');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -33,8 +39,42 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (!session) {
       navigate('/auth');
+      return;
     }
-  }, [session]);
+
+    const currentTier = profile?.subscription_tier || 'free';
+
+    // If they already have an active/cancelled subscription or customer ID, redirect them to Customer Portal to change plan
+    if (profile?.stripe_customer_id || currentTier !== 'free') {
+      const portalLink = import.meta.env.VITE_STRIPE_CUSTOMER_PORTAL_LINK;
+      if (portalLink) {
+        window.location.href = `${portalLink}?prefilled_email=${encodeURIComponent(session.user.email)}`;
+        return;
+      }
+    }
+
+    const standardLink = import.meta.env.VITE_STRIPE_PAYMENT_LINK_STANDARD;
+    const premiumLink = import.meta.env.VITE_STRIPE_PAYMENT_LINK;
+    const ultimateLink = import.meta.env.VITE_STRIPE_PAYMENT_LINK_ULTIMATE || premiumLink;
+    
+    let targetLink;
+    if (selectedPlan === 'standard') {
+      targetLink = standardLink;
+    } else if (selectedPlan === 'ai_ultimate') {
+      targetLink = ultimateLink;
+    } else {
+      targetLink = premiumLink;
+    }
+
+    if (targetLink) {
+      localStorage.setItem('optilife_pending_checkout', selectedPlan);
+      const separator = targetLink.includes('?') ? '&' : '?';
+      const targetLinkWithParams = `${targetLink}${separator}client_reference_id=${session.user.id}_${selectedPlan}&prefilled_email=${encodeURIComponent(session.user.email)}`;
+      window.location.href = targetLinkWithParams;
+    } else {
+      navigate('/pricing');
+    }
+  }, [session, selectedPlan, navigate, profile]);
 
   const handleCardNumberChange = (e) => {
     let value = e.target.value.replace(/\D/g, '');
@@ -102,10 +142,16 @@ export default function CheckoutPage() {
       setSuccess(true);
       addNotification({
         type: 'success',
-        title: selectedPlan === 'ai_ultimate' ? 'ברוכים הבאים ל-OptiLife AI Ultimate! ⚡' : 'ברוכים הבאים ל-OptiLife Premium! 🎉',
+        title: selectedPlan === 'ai_ultimate' 
+          ? 'ברוכים הבאים ל-OptiLife אולטימטיבי! ⚡' 
+          : selectedPlan === 'premium' 
+            ? 'ברוכים הבאים ל-OptiLife מקצועי! 🎉' 
+            : 'ברוכים הבאים ל-OptiLife מתקדם! 🌟',
         message: selectedPlan === 'ai_ultimate'
           ? 'העסקה בוצעה בהצלחה. צ\'אט מאמן הבריאות ה-AI, מחולל התפריטים והחיזויים פתוחים בפניך כעת!'
-          : 'העסקה בוצעה בהצלחה. כל תכונות ה-AI, ניתוח המגמות ודוחות ה-PDF פתוחים כעת בפניך!',
+          : selectedPlan === 'premium'
+            ? 'העסקה בוצעה בהצלחה. העלאת בדיקות ותוכניות בריאות ללא הגבלה ומעקב המגמות פתוחים בפניך כעת!'
+            : 'העסקה בוצעה בהצלחה. ניתוח בדיקות מורחב, יצירת תוכנית בריאות וייצוא PDF פתוחים בפניך כעת!',
         link: selectedPlan === 'ai_ultimate' ? '/ai-coach' : '/dashboard'
       });
 
@@ -126,42 +172,42 @@ export default function CheckoutPage() {
     setLoading(true);
     setError(null);
     try {
+      const standardLink = import.meta.env.VITE_STRIPE_PAYMENT_LINK_STANDARD;
       const premiumLink = import.meta.env.VITE_STRIPE_PAYMENT_LINK;
       const ultimateLink = import.meta.env.VITE_STRIPE_PAYMENT_LINK_ULTIMATE || premiumLink;
-      const targetLink = selectedPlan === 'ai_ultimate' ? ultimateLink : premiumLink;
+      
+      let targetLink;
+      if (selectedPlan === 'standard') {
+        targetLink = standardLink;
+      } else if (selectedPlan === 'ai_ultimate') {
+        targetLink = ultimateLink;
+      } else {
+        targetLink = premiumLink;
+      }
       
       if (targetLink) {
-        // Stripe payment link URL
-        window.location.href = targetLink;
+        localStorage.setItem('optilife_pending_checkout', selectedPlan);
+        const separator = targetLink.includes('?') ? '&' : '?';
+        const targetLinkWithParams = `${targetLink}${separator}client_reference_id=${session.user.id}_${selectedPlan}&prefilled_email=${encodeURIComponent(session.user.email)}`;
+        window.location.href = targetLinkWithParams;
       } else {
         throw new Error('קישור Stripe לא מוגדר בקובץ ההגדרות.');
       }
     } catch (err) {
       console.error(err);
-      setError('אירעה שגיאה במעבר לסליקה ב-Stripe.');
+      setError('אירעה שגיאה במעבר לעמוד התשלום המאובטח.');
       setLoading(false);
     }
   };
 
-  if (success) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-body text-right" dir="rtl">
-        <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-slate-100 shadow-2xl text-center space-y-6 animate-in zoom-in-95 duration-300">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-status-success/10 text-status-success rounded-full animate-bounce">
-            <CheckCircle2 className="w-10 h-10" />
-          </div>
-          <h1 className="text-3xl font-black text-primary">התשלום בוצע בהצלחה!</h1>
-          <p className="text-on-surface-variant text-base leading-relaxed">
-            תודה רבה שהצטרפת למשפחת OptiLife Premium. חשבונך שודרג בהצלחה, מנוע ה-AI מוכן כעת לנתח את הבדיקות שלך ולהפיק עבורך תובנות בריאותיות מיידיות!
-          </p>
-          <div className="flex items-center justify-center gap-2 text-xs font-bold text-slate-400">
-            <Loader2 className="w-4 h-4 animate-spin text-secondary" />
-            <span>מעביר אותך כעת ללוח הבקרה...</span>
-          </div>
-        </div>
+  return (
+    <main className="md:pr-72 pt-24 min-h-screen bg-background" dir="rtl">
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-md text-center">
+        <Loader2 className="w-12 h-12 text-secondary animate-spin" />
+        <p className="text-on-surface-variant font-medium text-lg">מעביר אותך בצורה מאובטחת לעמוד התשלום...</p>
       </div>
-    );
-  }
+    </main>
+  );
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-between font-body text-right" dir="rtl">
@@ -227,7 +273,7 @@ export default function CheckoutPage() {
               className={`w-1/3 py-3 text-center rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer border-0 ${paymentMethod === 'stripe' ? 'bg-indigo-650 bg-indigo-600 text-white font-bold shadow-md' : 'text-on-surface-variant hover:text-primary'}`}
             >
               <span className="material-symbols-outlined text-sm font-bold shrink-0">payments</span>
-              <span>Stripe</span>
+              <span>תשלום דיגיטלי</span>
             </button>
           </div>
 
@@ -378,9 +424,9 @@ export default function CheckoutPage() {
             <div className="space-y-6 py-6 text-center animate-in fade-in duration-300">
               <div className="max-w-xs mx-auto p-6 border border-slate-100 rounded-2xl bg-indigo-50/50 flex flex-col items-center">
                 <span className="material-symbols-outlined text-4xl text-indigo-500 mb-2">payments</span>
-                <h4 className="font-bold text-primary mb-1 text-sm">מעבר מאובטח לסליקה ב-Stripe</h4>
+                <h4 className="font-bold text-primary mb-1 text-sm">מעבר מאובטח לעמוד התשלום</h4>
                 <p className="text-on-surface-variant text-[11px] leading-relaxed">
-                  הינך מועבר לדף התשלום הרשמי והמאובטח של Stripe להשלמת העסקה.
+                  הינך מועבר לדף התשלום הרשמי והמאובטח להשלמת העסקה.
                 </p>
               </div>
 
@@ -392,7 +438,7 @@ export default function CheckoutPage() {
                 {loading ? (
                   <Loader2 className="w-6 h-6 animate-spin" />
                 ) : (
-                  <span>המשך ל-Stripe Checkout 💳</span>
+                  <span>המשך לתשלום מאובטח 💳</span>
                 )}
               </button>
             </div>
@@ -406,7 +452,7 @@ export default function CheckoutPage() {
             </span>
             <span className="flex items-center gap-1.5">
               <Lock className="w-4 h-4 text-slate-400 shrink-0" />
-              <span>סליקה מאובטחת דרך Stripe</span>
+              <span>סליקה מאובטחת ומאושרת PCI</span>
             </span>
           </div>
         </div>
@@ -423,7 +469,7 @@ export default function CheckoutPage() {
                 <h3 className="font-bold text-primary text-sm">מנוי {planNameHebrew}</h3>
                 <p className="text-[11px] text-on-surface-variant leading-relaxed mt-1">
                   {selectedPlan === 'ai_ultimate'
-                    ? 'החבילה הטכנולוגית המלאה: צ\'אט פתוח עם מאמן בריאות AI אינטראקטיבי 24/7, מחולל תפריטים, ומגמות חיזוי מתקדמות לצד כל יכולות הפרימיום.'
+                    ? 'החבילה הטכנולוגית המלאה: צ\'אט פתוח עם מאמן בריאות AI אינטראקטיבי 24/7, מחולל תפריטים, ומגמות חיזוי מתקדמות לצד כל יכולות המסלול המקצועי.'
                     : 'תוכנית חודשית לניתוח בדיקות דם עם AI, המלצות כושר ותזונה מפורטות, הפקת דוחות PDF מקיפים ומעקב מגמות בריאותיות.'}
                 </p>
               </div>

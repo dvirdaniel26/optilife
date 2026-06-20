@@ -4,7 +4,7 @@ import { NotificationsContext } from '../context/NotificationsContext';
 import { supabase } from '../lib/supabase';
 import { analyzeMedicalImage } from '../lib/gemini';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, AlertCircle, Sparkles, CheckCircle2, Calendar, FileText, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { Loader2, AlertCircle, Sparkles, CheckCircle2, Calendar, FileText } from 'lucide-react';
 
 export default function TestAnalysisPage() {
   const { profile, session, isPremium, setProfile } = useContext(UserContext);
@@ -27,44 +27,7 @@ export default function TestAnalysisPage() {
   // AI Pending Result state when date is NOT detected
   const [pendingResult, setPendingResult] = useState(null);
 
-  // One-time professional data sharing consent state
-  const [showConsentModal, setShowConsentModal] = useState(false);
 
-  useEffect(() => {
-    if (profile && session?.user?.id) {
-      const choiceMade = localStorage.getItem(`optilife_consent_sharing_choice_${session.user.id}`) === 'true';
-      const hasConsentedDb = profile.consent_sharing === true;
-      if (!choiceMade && !hasConsentedDb) {
-        setShowConsentModal(true);
-      }
-    }
-  }, [profile, session]);
-
-  const handleSaveConsent = async (consented) => {
-    if (!session?.user?.id) return;
-    
-    // Update local React user state
-    if (setProfile) {
-      setProfile(prev => ({ ...prev, consent_sharing: consented }));
-    }
-
-    try {
-      // 1. Try to update Supabase database
-      const { error: dbError } = await supabase
-        .from('profiles')
-        .update({ consent_sharing: consented })
-        .eq('id', session.user.id);
-        
-      if (dbError) throw dbError;
-    } catch (err) {
-      console.warn("Could not save consent to database (profiles table schema might need update), falling back to LocalStorage:", err);
-    }
-
-    // 2. Persist choice and consent in LocalStorage
-    localStorage.setItem(`optilife_consent_sharing_choice_${session.user.id}`, 'true');
-    localStorage.setItem(`optilife_consent_sharing_${session.user.id}`, consented ? 'true' : 'false');
-    setShowConsentModal(false);
-  };
 
   const yearVal = testDate.split('-')[0] || new Date().getFullYear().toString();
   const monthVal = testDate.split('-')[1] || (new Date().getMonth() + 1).toString().padStart(2, '0');
@@ -311,27 +274,111 @@ export default function TestAnalysisPage() {
     await saveAnalysisResults(pendingResult, testDate);
   };
 
-  // Determine if user has access to AI analysis (Premium OR first-time free user)
-  const isAllowedToAnalyze = isPremium || totalTests === 0;
+  // Determine subscription tier status
+  const currentTier = profile?.subscription_tier || 'free';
+  const isCurrentlyAiUltimate = currentTier === 'ai_ultimate' || currentTier.startsWith('ai_ultimate_cancelled:');
+  const isCurrentlyPremium = currentTier === 'premium' || currentTier.startsWith('premium_cancelled:');
+  const isCurrentlyStandard = currentTier === 'standard' || currentTier.startsWith('standard_cancelled:');
+
+  // Enforce tier upload limits dynamically
+  let isAllowedToAnalyze = false;
+  if (isCurrentlyPremium || isCurrentlyAiUltimate) {
+    isAllowedToAnalyze = true;
+  } else if (isCurrentlyStandard) {
+    isAllowedToAnalyze = totalTests < 3;
+  } else {
+    // free tier
+    isAllowedToAnalyze = totalTests < 1;
+  }
+
+
+  const getQuotaDisplay = () => {
+    if (isCurrentlyPremium || isCurrentlyAiUltimate) {
+      return {
+        label: 'מנוי אולטימטיבי 👑',
+        used: totalTests,
+        limit: 'ללא הגבלה',
+        percent: 100,
+        colorClass: 'bg-gradient-to-l from-yellow-400 to-amber-500 bg-amber-400',
+        bgClass: 'bg-amber-500/10 border-amber-500/20 text-amber-600',
+        badge: 'פעיל - ללא הגבלה ⚡'
+      };
+    }
+    if (isCurrentlyStandard) {
+      const pct = Math.min((totalTests / 3) * 100, 100);
+      return {
+        label: 'מנוי מתקדם 🌟',
+        used: totalTests,
+        limit: 3,
+        percent: pct,
+        colorClass: 'bg-secondary',
+        bgClass: 'bg-secondary/10 border-secondary/20 text-secondary',
+        badge: `${totalTests} מתוך 3 בדיקות`
+      };
+    }
+    // Free tier
+    const pct = Math.min((totalTests / 1) * 100, 100);
+    return {
+      label: 'מסלול בסיסי (חינם)',
+      used: totalTests,
+      limit: 1,
+      percent: pct,
+      colorClass: 'bg-primary',
+      bgClass: 'bg-primary/10 border-primary/20 text-primary',
+      badge: `${totalTests} מתוך 1 בדיקה`
+    };
+  };
+
+  const quota = getQuotaDisplay();
 
   return (
-    <main className="md:pr-72 pt-20 min-h-screen transition-all" dir="rtl">
+    <main className="md:pr-72 pt-24 min-h-screen transition-all bg-background" dir="rtl">
       <div className="p-xl max-w-4xl mx-auto">
-        <div className="mb-xl flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-          <div>
-            <h2 className="font-heading text-h1 text-primary mb-xs">
+        {/* Header Dashboard Banner */}
+        <div className="bg-white p-6 md:p-8 rounded-3xl border border-outline/10 custom-shadow mb-8 flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="text-right w-full md:w-auto">
+            <span className="px-3 py-1 bg-secondary/10 text-secondary text-xs font-bold rounded-full mb-3 inline-block">ניתוח בדיקות AI 📊</span>
+            <h2 className="font-heading text-2xl md:text-3xl text-primary font-bold mb-2">
               שלום {firstName}, {isFemale ? 'בואי ננתח' : 'בוא ננתח'} את הבדיקות שלך
             </h2>
-            <p className="font-body text-body-lg text-on-surface-variant">
+            <p className="font-body text-sm text-on-surface-variant max-w-xl leading-relaxed">
               {isFemale 
-                ? 'העלי צילום של תוצאות המעבדה שלך וקבלי תובנות בריאותיות מיידיות מבוססות AI.' 
-                : 'העלה צילום של תוצאות המעבדה שלך וקבל תובנות בריאותיות מיידיות מבוססות AI.'}
+                ? 'העלי צילום ברור של תוצאות המעבדה שלך וקבלי תוך שניות תובנות בריאותיות מבוססות בינה מלאכותית, השוואה למדדים קודמים ופירוט מקיף בעברית.' 
+                : 'העלה צילום ברור של תוצאות המעבדה שלך וקבל תוך שניות תובנות בריאותיות מבוססות בינה מלאכותית, השוואה למדדים קודמים ופירוט מקיף בעברית.'}
             </p>
+          </div>
+          
+          {/* Quota Display */}
+          <div className="w-full md:w-80 bg-slate-50 border border-slate-100 rounded-2xl p-5 shrink-0 text-right">
+            <div className="flex justify-between items-center mb-3">
+              <span className="text-xs font-bold text-slate-500">ניצול מכסת בדיקות:</span>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${quota.bgClass}`}>
+                {quota.badge}
+              </span>
+            </div>
+            <div className="text-md font-bold text-primary mb-2 flex items-center justify-between">
+              <span>{quota.label}</span>
+              <span dir="ltr" className="text-xs text-on-surface-variant font-bold">{quota.used} / {quota.limit}</span>
+            </div>
+            
+            {/* Progress bar */}
+            <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden mb-3">
+              <div 
+                className={`h-full rounded-full transition-all duration-500 ${quota.colorClass}`}
+                style={{ width: `${quota.percent}%` }}
+              />
+            </div>
+            
+            {!isPremium && (
+              <a href="/pricing" className="text-xs text-secondary font-bold hover:underline block text-center mt-2">
+                {isFemale ? 'שדרגי להעלאה ללא הגבלה 👑' : 'שדרג להעלאה ללא הגבלה 👑'}
+              </a>
+            )}
           </div>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-status-error/10 border border-status-error/20 rounded-xl flex items-start gap-3 text-status-error text-sm">
+          <div className="mb-6 p-4 bg-status-error/10 border border-status-error/20 rounded-xl flex items-start gap-3 text-status-error text-sm text-right">
             <AlertCircle className="w-5 h-5 shrink-0" />
             <p className="mt-0.5">{error}</p>
           </div>
@@ -346,49 +393,32 @@ export default function TestAnalysisPage() {
             className="hidden"
           />
 
-          {!profile?.consent_sharing && (
-            <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-md px-lg flex items-center justify-between gap-sm text-right w-full max-w-2xl mx-auto mb-2 text-xs">
-              <div className="flex items-center gap-xs text-amber-800">
-                <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0" />
-                <span className="font-medium">
-                  <strong>שים לב:</strong> המידע שלך אינו משותף כעת עם צוות המנהלים המקצועי באתר.
-                </span>
-              </div>
-              <button 
-                onClick={() => setShowConsentModal(true)}
-                className="text-xs text-primary font-bold hover:underline cursor-pointer select-none"
-              >
-                אשר שיתוף כעת 🤝
-              </button>
-            </div>
-          )}
-
           {pendingResult ? (
             /* 🧬 STEP 2: AI completed successfully but Date was NOT detected. Show Date picker! */
-            <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-xl space-y-6 animate-in zoom-in-95 duration-200">
-              <div className="flex items-center gap-3 border-b border-slate-50 pb-4">
-                <div className="w-12 h-12 bg-status-success/10 rounded-2xl flex items-center justify-center text-status-success">
-                  <CheckCircle2 className="w-6 h-6 animate-pulse" />
+            <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-xl space-y-6 animate-in zoom-in-95 duration-200 text-right">
+              <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+                <div className="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-600 shrink-0">
+                  <span className="material-symbols-outlined text-2xl">check_circle</span>
                 </div>
                 <div>
-                  <h3 className="font-heading text-2xl font-bold text-primary">הניתוח הושלם בהצלחה! 🧬</h3>
+                  <h3 className="font-heading text-xl font-bold text-primary">הניתוח הושלם בהצלחה! 🎉</h3>
                   <p className="text-on-surface-variant text-xs">כל המדדים והתובנות חולצו בהצלחה על ידי ה-AI.</p>
                 </div>
               </div>
 
-              <div className="bg-secondary/5 rounded-2xl p-5 border border-secondary/10 space-y-4">
-                <div className="flex items-start gap-3 text-right">
-                  <Calendar className="w-6 h-6 text-secondary shrink-0 mt-0.5 animate-bounce" />
+              <div className="bg-amber-50/50 rounded-2xl p-5 border border-amber-200/40 space-y-4">
+                <div className="flex items-start gap-3">
+                  <span className="material-symbols-outlined text-amber-600 text-2xl shrink-0 mt-0.5">calendar_month</span>
                   <div>
-                    <h4 className="font-bold text-primary text-sm mb-1">עדכון תאריך בדיקה</h4>
-                    <p className="text-on-surface-variant text-xs leading-relaxed">
-                      לא הצלחנו לזהות את תאריך ביצוע הבדיקה מתוך התמונה באופן אוטומטי. {isFemale ? 'אנא בחרי' : 'אנא בחר'} את תאריך ביצוע הבדיקה כדי שנוכל לשמור את המגמות וההיסטוריה שלך בצורה מדויקת:
+                    <h4 className="font-bold text-amber-900 text-sm mb-1">אישור תאריך בדיקה</h4>
+                    <p className="text-amber-800 text-xs leading-relaxed">
+                      לא הצלחנו לזהות את תאריך ביצוע הבדיקה מתוך התמונה באופן אוטומטי. {isFemale ? 'אנא בחרי' : 'אנא בחר'} את התאריך שבו בוצעה הבדיקה בפועל כדי שנוכל לשמור אותה נכון בציר הזמן שלך:
                     </p>
                   </div>
                 </div>
 
                 {/* Date Picker Input */}
-                <div className="w-full max-w-md mx-auto pt-2">
+                <div className="w-full max-w-md mx-auto pt-2" style={{ direction: 'rtl' }}>
                   <div className="flex gap-3 justify-between">
                     {/* Day selector */}
                     <div className="flex-1">
@@ -442,7 +472,7 @@ export default function TestAnalysisPage() {
                 <button
                   onClick={handleSavePendingWithCustomDate}
                   disabled={isAnalyzing}
-                  className="bg-accent-action hover:shadow-lg text-primary font-bold px-10 py-4 rounded-full flex items-center justify-center gap-2 transition-all active:scale-95 text-base cursor-pointer"
+                  className="bg-secondary hover:bg-secondary/90 text-white font-bold px-10 py-3.5 rounded-full flex items-center justify-center gap-2 transition-all active:scale-95 text-base cursor-pointer shadow-md"
                 >
                   {isAnalyzing ? (
                     <>
@@ -451,7 +481,7 @@ export default function TestAnalysisPage() {
                     </>
                   ) : (
                     <>
-                      <CheckCircle2 className="w-5 h-5" />
+                      <span className="material-symbols-outlined text-lg">save</span>
                       <span>שמור והצג תוצאות</span>
                     </>
                   )}
@@ -464,149 +494,209 @@ export default function TestAnalysisPage() {
                     setPreviewUrl(null);
                   }}
                   disabled={isAnalyzing}
-                  className="text-status-error font-bold text-sm hover:underline"
+                  className="text-status-error font-bold text-sm hover:underline cursor-pointer"
                 >
-                  התחל מחדש (החלפת תמונה)
+                  החלפת תמונה
                 </button>
               </div>
             </div>
           ) : (
-            /* 📥 STEP 1: standard File Uploaddashed border (NO pre-analysis date picker) */
-            <div
-              onClick={() => !isAnalyzing && fileInputRef.current?.click()}
-              className={`upload-dashed-border bg-white min-h-[320px] flex flex-col items-center justify-center p-xl transition-all ${isAnalyzing ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/80 cursor-pointer'} custom-shadow relative overflow-hidden`}
-            >
-              {previewUrl ? (
-                <div
-                  className="flex flex-col items-center w-full align-stretch"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <img src={previewUrl} alt="Preview" className="max-h-[220px] object-contain mb-6 rounded-2xl shadow-md border border-slate-100" />
-                  
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedFile(null);
-                      setPreviewUrl(null);
-                      setTestDate(new Date().toISOString().split('T')[0]);
-                    }}
-                    className="text-status-error text-sm font-bold hover:underline mb-2"
-                    disabled={isAnalyzing}
-                  >
-                    הסר תמונה
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <div className="w-16 h-16 bg-secondary/10 rounded-full flex items-center justify-center mb-md">
-                    <span className="material-symbols-outlined text-secondary text-4xl" style={{ fontVariationSettings: "'wght' 300" }}>add_photo_alternate</span>
+            /* 📥 STEP 1: standard File Upload dashed border or Premium Upgrade Promo Card */
+            <>
+              {isAllowedToAnalyze ? (
+                previewUrl ? (
+                  /* Image Preview Card */
+                  <div className="bg-white rounded-3xl p-8 border border-outline/10 custom-shadow flex flex-col md:flex-row items-center gap-8 animate-in fade-in duration-300">
+                    <div className="relative shrink-0 w-full md:w-56 h-56 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-center overflow-hidden shadow-inner">
+                      <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                      <button
+                        onClick={() => {
+                          setSelectedFile(null);
+                          setPreviewUrl(null);
+                          setTestDate(new Date().toISOString().split('T')[0]);
+                        }}
+                        className="absolute top-2 right-2 p-2 bg-rose-500 text-white rounded-full hover:bg-rose-600 transition-colors shadow-md flex items-center justify-center cursor-pointer"
+                        title="הסר תמונה"
+                      >
+                        <span className="material-symbols-outlined text-sm">delete</span>
+                      </button>
+                    </div>
+                    
+                    <div className="flex-1 text-right w-full">
+                      <div className="mb-6">
+                        <span className="px-2.5 py-0.5 bg-secondary/10 text-secondary text-xs font-bold rounded-full mb-2 inline-block">קובץ מוכן לניתוח 📂</span>
+                        <h4 className="text-lg font-bold text-primary mb-1">{selectedFile?.name}</h4>
+                        <p className="text-xs text-on-surface-variant">גודל: {Math.round(selectedFile?.size / 1024)} KB</p>
+                      </div>
+                      
+                      <div className="flex flex-col sm:flex-row gap-4 items-center">
+                        <button
+                          onClick={handleAnalyze}
+                          disabled={isAnalyzing}
+                          className="w-full sm:w-auto bg-gradient-to-r from-yellow-400 to-amber-500 hover:shadow-lg text-primary font-extrabold px-8 py-3.5 rounded-full flex items-center justify-center gap-2 transition-all active:scale-95 text-base cursor-pointer"
+                        >
+                          {isAnalyzing ? (
+                            <>
+                              <Loader2 className="w-5 h-5 animate-spin" />
+                              <span>מנתח כעת (ממתינים ל-AI)...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="material-symbols-outlined text-lg">bolt</span>
+                              <span>התחל ניתוח AI ⚡</span>
+                            </>
+                          )}
+                        </button>
+                        
+                        <button
+                          onClick={() => {
+                            setSelectedFile(null);
+                            setPreviewUrl(null);
+                            setTestDate(new Date().toISOString().split('T')[0]);
+                          }}
+                          className="text-slate-400 text-sm font-semibold hover:text-rose-500 transition-colors cursor-pointer"
+                        >
+                          החלפת תמונה
+                        </button>
+                      </div>
+                      
+                      {!isPremium && totalTests === 0 && (
+                        <p className="text-xs text-secondary font-bold animate-pulse flex items-center gap-1 mt-4">
+                          <Sparkles className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                          <span>הניתוח הראשון שלך במתנה! 🎁</span>
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <h3 className="font-heading text-2xl text-primary mb-xs">
-                    {isFemale ? 'לחצי לבחירת תמונה של הבדיקות' : 'לחץ לבחירת תמונה של הבדיקות'}
-                  </h3>
-                  <p className="font-body text-body-lg text-on-surface-variant mb-md text-center">תומך בפורמטים JPEG, PNG</p>
-                  <button className="px-lg py-sm rounded-full border-2 border-secondary text-secondary font-bold hover:bg-secondary hover:text-white transition-all active:scale-95">
-                    בחירת תמונה
-                  </button>
-                </>
+                ) : (
+                  /* Standard Drag/Click upload dashed zone */
+                  <div
+                    onClick={() => !isAnalyzing && isAllowedToAnalyze && fileInputRef.current?.click()}
+                    className="relative min-h-[280px] bg-white rounded-3xl border-2 border-dashed border-secondary/30 hover:border-secondary flex flex-col items-center justify-center p-8 transition-all hover:bg-slate-50/55 cursor-pointer group shadow-sm hover:shadow-md"
+                  >
+                    <div className="w-16 h-16 rounded-2xl bg-secondary/10 flex items-center justify-center text-secondary mb-4 group-hover:scale-110 transition-transform duration-300">
+                      <span className="material-symbols-outlined text-4xl">cloud_upload</span>
+                    </div>
+                    <h3 className="font-heading text-xl text-primary font-bold mb-2">
+                      {isFemale ? 'לחצי לבחירת תמונה של הבדיקות' : 'לחץ לבחירת תמונה של הבדיקות'}
+                    </h3>
+                    <p className="font-body text-sm text-on-surface-variant mb-6 text-center max-w-sm">
+                      גררי לכאן או לחצי לבחירת קובץ. תומך בפורמטים JPEG, PNG ו-WEBP
+                    </p>
+                    <span className="px-5 py-2 rounded-xl bg-secondary text-white font-bold text-sm hover:bg-secondary/90 transition-colors shadow-sm">
+                      בחירת קובץ
+                    </span>
+                  </div>
+                )
+              ) : (
+                /* Locked State: Premium Upgrade Promo Card */
+                <div className="bg-primary text-white rounded-3xl p-8 border border-white/5 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center gap-8">
+                  {/* Decorative glowing background gradients */}
+                  <div className="absolute -top-16 -left-16 w-48 h-48 bg-secondary/30 rounded-full blur-3xl pointer-events-none" />
+                  <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />
+                  
+                  <div className="relative z-10 w-20 h-20 rounded-2xl bg-white/10 flex items-center justify-center text-amber-400 shrink-0 shadow-lg">
+                    <span className="material-symbols-outlined text-5xl">workspace_premium</span>
+                  </div>
+                  
+                  <div className="relative z-10 flex-1 text-right w-full">
+                    <span className="px-3 py-1 bg-amber-500/20 text-amber-300 text-xs font-bold rounded-full mb-3 inline-block">שדרוג מנוי נדרש 👑</span>
+                    <h3 className="text-2xl font-bold mb-2">הגעת למגבלת העלאת הבדיקות שלך</h3>
+                    <p className="text-sm text-slate-300 leading-relaxed mb-6 max-w-xl">
+                      {currentTier === 'free'
+                        ? 'המסלול החינמי מאפשר העלאה וניתוח של בדיקת מעבדה אחת בלבד. כדי להעלות בדיקות נוספות ולעקוב אחר מגמות הבריאות שלך, שדרגי למסלול מתקדם או מקצועי.'
+                        : `הגעת למגבלת העלאת בדיקות במסלול המתקדם שלך (עד 3 בדיקות). שדרגי למסלול מקצועי או אולטימטיבי כדי ליהנות מהעלאה וניתוח ללא הגבלה!`}
+                    </p>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 max-w-lg">
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="material-symbols-outlined text-secondary text-sm">check_circle</span>
+                        <span>העלאת בדיקות ללא הגבלה 📊</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="material-symbols-outlined text-secondary text-sm">check_circle</span>
+                        <span>מעקב והשוואת מגמות לאורך זמן 📈</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="material-symbols-outlined text-secondary text-sm">check_circle</span>
+                        <span>צ\'אט מאמן בריאות 24/7 עם בינה מלאכותית 💬</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="material-symbols-outlined text-secondary text-sm">check_circle</span>
+                        <span>המלצות תזונה ואימונים מותאמות אישית 🥗</span>
+                      </div>
+                    </div>
+                    
+                    <a
+                      href="/pricing"
+                      className="inline-flex justify-center items-center bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-300 hover:to-amber-400 text-primary font-extrabold px-10 py-3.5 rounded-full hover:shadow-lg hover:shadow-amber-500/20 active:scale-95 transition-all text-base cursor-pointer"
+                    >
+                      לצפייה במסלולי שדרוג 🚀
+                    </a>
+                  </div>
+                </div>
               )}
-            </div>
+            </>
           )}
 
           {/* Medical Disclaimer Banner */}
-          <div className="bg-amber-50/70 border border-amber-200/50 rounded-xl p-4 flex items-start gap-3 max-w-2xl mx-auto w-full text-right my-sm" dir="rtl">
-            <span className="material-symbols-outlined text-amber-600 text-2xl shrink-0 mt-0.5" style={{ fontVariationSettings: "'wght' 500" }}>warning</span>
-            <div>
-              <h4 className="font-bold text-amber-900 text-xs mb-1">הבהרה רפואית חשובה:</h4>
-              <p className="text-amber-800 text-[11px] leading-relaxed">
-                מערכת זו מבוססת על בינה מלאכותית (AI) ומיועדת למטרות מידע והעשרה בלבד. הניתוח וההמלצות אינם מהווים ייעוץ רפואי, אבחנה או תוכנית טיפול חלופית. חובה להתייעץ עם רופא או תזונאי מוסמך לפני ביצוע שינויים תזונתיים או רפואיים כלשהם.
-              </p>
+          <div className="bg-slate-100/60 border border-slate-200/50 rounded-2xl p-5 text-right mt-4 max-w-3xl mx-auto w-full" dir="rtl">
+            <div className="flex gap-3">
+              <span className="material-symbols-outlined text-amber-500 text-2xl shrink-0">info</span>
+              <div>
+                <h4 className="font-bold text-primary text-xs mb-1">הבהרה רפואית חשובה:</h4>
+                <p className="text-on-surface-variant text-[11px] leading-relaxed">
+                  מערכת זו מבוססת על בינה מלאכותית (AI) ומיועדת למטרות מידע והעשרה בלבד. הניתוח וההמלצות אינם מהווים ייעוץ רפואי, אבחנה או תוכנית טיפול חלופית. חובה להתייעץ עם רופא או תזונאי מוסמך לפני ביצוע שינויים תזונתיים או רפואיים כלשהם.
+                </p>
+              </div>
             </div>
           </div>
-
-          {!pendingResult && (
-            <div className="flex justify-center mt-sm">
-              {isAllowedToAnalyze ? (
-                <div className="flex flex-col items-center gap-3">
-                  <button
-                    onClick={handleAnalyze}
-                    disabled={!selectedFile || isAnalyzing}
-                    className={`bg-accent-action text-primary font-bold px-xl py-lg rounded-full shadow-xl flex items-center gap-md transition-all active:scale-95 group ${(!selectedFile || isAnalyzing) ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'}`}
-                  >
-                    {isAnalyzing ? (
-                      <>
-                        <Loader2 className="w-6 h-6 animate-spin" />
-                        <span className="text-xl">ה-AI מנתח את התוצאות...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="material-symbols-outlined font-bold group-hover:rotate-12 transition-transform text-2xl">bolt</span>
-                        <span className="text-xl">התחל ניתוח AI</span>
-                      </>
-                    )}
-                  </button>
-                  
-                  {!isPremium && totalTests === 0 && (
-                    <p className="text-xs text-secondary font-bold animate-pulse flex items-center gap-1">
-                      <Sparkles className="w-3.5 h-3.5 text-accent-action fill-accent-action" />
-                      <span>מתנה: יש לך ניתוח AI ראשון בחינם! 🎁</span>
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center gap-2">
-                  <button disabled className="bg-surface border-2 border-outline/20 text-on-surface-variant font-bold px-xl py-lg rounded-full flex items-center gap-md cursor-not-allowed opacity-70">
-                    <span className="material-symbols-outlined text-2xl">lock</span>
-                    <span className="text-xl">התחל ניתוח AI</span>
-                  </button>
-                  <p className="text-xs text-secondary font-bold text-center max-w-md leading-relaxed mt-2 w-full" style={{ minWidth: '320px' }}>
-                    ניצלת את ניתוח ה-AI החינמי החד-פעמי שלך. 🌟 {isFemale ? 'שדרגי' : 'שדרג'} לפרימיום כדי ליהנות מניתוח ללא הגבלה ותובנות מתקדמות!
-                  </p>
-                  <a href="/pricing" className="text-xs text-primary font-bold hover:underline underline-offset-4 mt-1">
-                    לצפייה במסלולי שדרוג
-                  </a>
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
         {/* Recent Tests and AI Insights Section */}
-        <div className="grid grid-cols-12 gap-md mt-xl">
+        <div className="grid grid-cols-12 gap-6 mt-12">
           <div className="col-span-12 md:col-span-8">
-            <div className="bg-white rounded-xl p-md custom-shadow border border-outline/5 h-full">
-              <div className="flex justify-between items-center mb-md pb-2 border-b border-slate-50">
+            <div className="bg-white rounded-3xl p-6 md:p-8 custom-shadow border border-outline/5 h-full text-right">
+              <div className="flex justify-between items-center mb-6 pb-3 border-b border-slate-100">
                 <h3 className="font-heading text-lg font-bold text-primary">בדיקות אחרונות שהועלו</h3>
-                <button onClick={() => navigate('/analysis')} className="text-secondary text-xs font-bold hover:underline">לכל התוצאות</button>
+                <button onClick={() => navigate('/tests')} className="text-secondary text-sm font-bold hover:underline cursor-pointer">לכל התוצאות ←</button>
               </div>
 
               {loadingTests ? (
-                <div className="py-8 text-center text-on-surface-variant text-sm">טוען בדיקות אחרונות...</div>
+                <div className="py-12 text-center text-on-surface-variant text-sm flex items-center justify-center gap-2">
+                  <Loader2 className="w-5 h-5 animate-spin text-secondary" />
+                  <span>טוען בדיקות אחרונות...</span>
+                </div>
               ) : recentTests.length === 0 ? (
-                <div className="py-8 text-center text-on-surface-variant text-sm flex flex-col items-center justify-center h-[120px]">
-                  <span className="material-symbols-outlined text-3xl opacity-30 mb-2">description</span>
-                  <p className="w-full max-w-sm text-center">
+                <div className="py-12 text-center text-on-surface-variant text-sm flex flex-col items-center justify-center min-h-[160px]">
+                  <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center mb-3 text-slate-400">
+                    <span className="material-symbols-outlined text-2xl">description</span>
+                  </div>
+                  <p className="max-w-sm text-center text-xs">
                     {isFemale ? 'טרם הועלו בדיקות. העלי את הבדיקה הראשונה שלך למעלה!' : 'טרם הועלו בדיקות. העלה את הבדיקה הראשונה שלך למעלה!'}
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-sm">
+                <div className="space-y-4">
                   {recentTests.map((test) => (
                     <div
                       key={test.id}
                       onClick={() => navigate('/analysis', { state: { testId: test.id } })}
-                      className="group p-md rounded-xl bg-background border border-transparent hover:border-secondary/20 transition-all cursor-pointer w-full flex items-center justify-between"
+                      className="group p-4 rounded-2xl bg-slate-50/50 hover:bg-slate-50 border border-slate-100 hover:border-secondary/20 transition-all duration-200 cursor-pointer w-full flex items-center justify-between"
                     >
-                      <div className="flex items-center gap-md">
-                        <div className="w-10 h-10 rounded-lg bg-secondary/10 flex items-center justify-center text-secondary flex-shrink-0">
+                      <div className="flex items-center gap-4">
+                        <div className="w-11 h-11 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary group-hover:scale-110 transition-transform flex-shrink-0">
                           <span className="material-symbols-outlined">science</span>
                         </div>
                         <div>
-                          <p className="font-bold text-primary text-sm">{test.test_name}</p>
-                          <p className="text-xs text-on-surface-variant">{new Date(test.test_date).toLocaleDateString('he-IL')}</p>
+                          <p className="font-bold text-primary text-sm group-hover:text-secondary transition-colors">{test.test_name}</p>
+                          <p className="text-xs text-on-surface-variant flex items-center gap-1 mt-0.5">
+                            <span className="material-symbols-outlined text-xs">calendar_today</span>
+                            {new Date(test.test_date).toLocaleDateString('he-IL')}
+                          </p>
                         </div>
                       </div>
-                      <span className="px-3 py-1 bg-status-success/10 text-status-success text-xs font-bold rounded-full">{test.status}</span>
+                      <span className="px-3 py-1 bg-emerald-500/10 text-emerald-600 text-xs font-bold rounded-full">{test.status}</span>
                     </div>
                   ))}
                 </div>
@@ -615,119 +705,22 @@ export default function TestAnalysisPage() {
           </div>
 
           <div className="col-span-12 md:col-span-4">
-            <div className="bg-secondary h-full rounded-xl p-md custom-shadow text-white relative overflow-hidden flex flex-col justify-center min-h-[180px]">
+            <div className="bg-gradient-to-br from-secondary to-teal-600 h-full rounded-3xl p-6 md:p-8 custom-shadow text-white relative overflow-hidden flex flex-col justify-center min-h-[220px] text-right">
+              {/* Decorative blurry circle */}
+              <div className="absolute -left-10 -bottom-10 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+              
               <div className="relative z-10">
-                <span className="material-symbols-outlined mb-xs text-accent-action text-3xl">auto_awesome</span>
-                <h4 className="font-heading text-lg font-bold mb-xs">תובנות מבוססות AI</h4>
-                <p className="text-xs opacity-90 leading-relaxed font-body">מנוע הניתוח המקצועי שלנו מזהה סמני בריאות, משווה אותם לטווחי הייחוס הרשמיים ומספק סיכום מקיף בעברית.</p>
+                <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-accent-action mb-4 shadow-sm">
+                  <span className="material-symbols-outlined text-3xl">auto_awesome</span>
+                </div>
+                <h4 className="font-heading text-lg font-bold mb-2">תובנות מבוססות AI ✨</h4>
+                <p className="text-xs opacity-90 leading-relaxed font-body">
+                  מנוע הניתוח המקצועי שלנו מזהה סמני בריאות, משווה אותם לטווחי הייחוס הרשמיים, ומספק סיכום מקיף, השוואה היסטורית והנחיות ממוקדות בעברית פשוטה וברורה.
+                </p>
               </div>
-              <div className="absolute -left-xs -bottom-xs w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
             </div>
           </div>
         </div>
-
-        {/* 🛡️ Stunning Professional Sharing Consent Modal */}
-        {showConsentModal && (
-          <div 
-            style={{ 
-              position: 'fixed', 
-              top: 0, 
-              left: 0, 
-              right: 0, 
-              bottom: 0, 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              backgroundColor: 'rgba(15, 23, 42, 0.65)', 
-              backdropFilter: 'blur(12px)', 
-              WebkitBackdropFilter: 'blur(12px)', 
-              zIndex: 99999, 
-              padding: '16px', 
-              boxSizing: 'border-box' 
-            }} 
-            dir="rtl"
-          >
-            <div 
-              style={{ 
-                width: '94%', 
-                maxWidth: '520px', 
-                minWidth: '280px', 
-                backgroundColor: '#ffffff', 
-                borderRadius: '24px', 
-                border: '1px solid rgba(0, 0, 0, 0.05)', 
-                padding: '32px', 
-                display: 'flex', 
-                flexDirection: 'column', 
-                gap: '20px', 
-                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)', 
-                boxSizing: 'border-box',
-                flexShrink: 0,
-                maxHeight: '90vh',
-                overflowY: 'auto'
-              }}
-            >
-              <div className="flex items-center gap-sm pb-sm border-b border-slate-100">
-                <div className="w-12 h-12 bg-secondary/10 rounded-2xl flex items-center justify-center text-secondary">
-                  <ShieldCheck className="w-7 h-7" />
-                </div>
-                <div>
-                  <h3 className="font-heading text-xl font-bold text-primary">אישור שיתוף נתונים לצוות המקצועי</h3>
-                  <p className="text-on-surface-variant text-[11px]">חשוב לנו לעדכן אותך לפני העלאת קבצים למערכת 🛡️</p>
-                </div>
-              </div>
-
-              <div className="space-y-sm py-xs">
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  מנהלי המערכת והתזונאים המוסמכים של <strong>OptiLife</strong> יכולים ללוות אותך באופן אישי, לעקוב אחר מדדי הבריאות שלך, ולפנות אליך עם המלצות תזונה ושיפור בריאות מותאמות אישית.
-                </p>
-
-                <div className="bg-slate-50 rounded-2xl p-sm border border-slate-100 flex flex-col gap-sm">
-                  <div className="flex gap-sm">
-                    <span className="material-symbols-outlined text-secondary text-lg shrink-0 mt-0.5">auto_awesome</span>
-                    <div>
-                      <h4 className="text-xs font-bold text-primary mb-[2px]">ליווי אישי מותאם</h4>
-                      <p className="text-[10px] text-slate-500 leading-relaxed">צוות הליווי יוכל לבנות ולהתאים לך תוכניות תזונה ובריאות מדויקות המבוססות על תוצאות בדיקת הדם.</p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-sm">
-                    <span className="material-symbols-outlined text-secondary text-lg shrink-0 mt-0.5">lock</span>
-                    <div>
-                      <h4 className="text-xs font-bold text-primary mb-[2px]">אבטחה ופרטיות</h4>
-                      <p className="text-[10px] text-slate-500 leading-relaxed">המידע הרפואי שלך מוצפן ומאובטח, ויהיה חשוף אך ורק לאנשי מקצוע מורשים באתר.</p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-sm">
-                    <span className="material-symbols-outlined text-secondary text-lg shrink-0 mt-0.5">sports_kabaddi</span>
-                    <div>
-                      <h4 className="text-xs font-bold text-primary mb-[2px]">שליטה מלאה</h4>
-                      <p className="text-[10px] text-slate-500 leading-relaxed">הבחירה היא שלך לחלוטין! {isFemale ? 'תוכלי' : 'תוכל'} לבחור להמשיך להשתמש באפליקציה באופן עצמאי ללא שיתוף.</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-sm pt-sm">
-                <button
-                  onClick={() => handleSaveConsent(true)}
-                  className="w-full bg-secondary text-white font-bold py-3.5 px-md rounded-xl transition-all duration-200 flex items-center justify-center gap-xs hover:shadow-lg active:scale-98 hover:bg-secondary/90 shadow-md text-xs cursor-pointer"
-                >
-                  <ShieldCheck className="w-4 h-4" />
-                  אני מאשר/ת שיתוף נתונים וקבלת ליווי אישי 🤝
-                </button>
-                
-                <button
-                  onClick={() => handleSaveConsent(false)}
-                  className="w-full text-slate-500 hover:text-slate-700 font-bold py-sm text-center text-xs transition-colors cursor-pointer"
-                >
-                  המשך ללא שיתוף (שימוש עצמאי בלבד) 👤
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
       </div>
     </main>
   );

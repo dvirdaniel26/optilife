@@ -389,12 +389,16 @@ export default function NotificationsPage() {
 
                     {selectedNotif.link && selectedNotif.link !== '/dashboard' && (
                       <button 
-                        onClick={() => navigate(selectedNotif.link)}
+                        onClick={() => {
+                          const targetLink = selectedNotif.link === '/support' ? '/dashboard' : selectedNotif.link;
+                          navigate(targetLink);
+                        }}
                         className="px-6 py-2.5 bg-secondary hover:bg-secondary/95 text-white font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-2 w-full sm:w-auto cursor-pointer shadow-md shadow-secondary/10"
                       >
                         {selectedNotif.link === '/upload' ? 'להעלאת בדיקת דם 🩸' : 
                          selectedNotif.link === '/plan' ? 'לצפייה בתוכנית הבריאות שלי 📋' : 
                          selectedNotif.link === '/settings' ? 'למעבר להגדרות הפרופיל 👤' : 
+                         selectedNotif.link === '/support' ? 'חזרה ללוח הבקרה 🏠' :
                          'עבור לעמוד לביצוע הפעולה'}
                         <span className="material-symbols-outlined text-sm">arrow_left</span>
                       </button>

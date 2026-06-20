@@ -146,8 +146,8 @@ export default function AiCoachPage() {
         if (msgs && msgs.length > 0) {
           loadedMessages = msgs.map(m => ({
             id: m.id,
-            sender: m.sender_role === 'user' ? 'user' : 'ai',
-            text: m.content,
+            sender: m.sender === 'user' ? 'user' : 'ai',
+            text: m.text,
             time: new Date(m.created_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
           }));
         }
@@ -172,8 +172,9 @@ export default function AiCoachPage() {
         if (currentChatId) {
           await supabase.from('coach_messages').insert([{
              chat_id: currentChatId,
-             sender_role: 'ai',
-             content: welcomeText
+             user_id: session.user.id,
+             sender: 'ai',
+             text: welcomeText
           }]);
         }
         setMessages([{
@@ -208,8 +209,9 @@ export default function AiCoachPage() {
       if (chatId) {
         await supabase.from('coach_messages').insert([{
            chat_id: chatId,
-           sender_role: 'user',
-           content: userText
+           user_id: session.user.id,
+           sender: 'user',
+           text: userText
         }]);
       }
 
@@ -230,8 +232,9 @@ export default function AiCoachPage() {
       if (chatId) {
         await supabase.from('coach_messages').insert([{
            chat_id: chatId,
-           sender_role: 'ai',
-           content: aiReply
+           user_id: session.user.id,
+           sender: 'ai',
+           text: aiReply
         }]);
       }
 

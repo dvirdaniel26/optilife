@@ -38,6 +38,7 @@ export default function AiCoachPage() {
   const [dbLoading, setDbLoading] = useState(true);
   const [latestTestInfo, setLatestTestInfo] = useState(null);
   const [abnormalMarkers, setAbnormalMarkers] = useState([]);
+  const [chatId, setChatId] = useState(null);
 
   // Chat State
   const [messages, setMessages] = useState([]);

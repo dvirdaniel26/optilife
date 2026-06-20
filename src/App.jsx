@@ -95,8 +95,15 @@ export default function App() {
           errorMsg.includes('invalid claim') || 
           errorMsg.includes('not found') || 
           error.status === 400 || 
-          error.status === 401
+          error.status === 401 ||
+          error.status === 404
         ) {
+          // If the user was deleted, silently log them out
+          if (errorMsg.includes('not found') || error.status === 404) {
+             await supabase.auth.signOut();
+             window.location.href = '/';
+             return;
+          }
           setShowSuspendedModal(true);
         }
       } else {
@@ -174,6 +181,12 @@ export default function App() {
             
           if (insertError) {
             console.error("Error creating profile:", insertError);
+            if (insertError.code === '23503' || insertError.message?.includes('foreign key')) {
+               // User was deleted from auth.users, force logout
+               await supabase.auth.signOut();
+               window.location.href = '/';
+               return;
+            }
           } else {
             data = newProfile;
           }

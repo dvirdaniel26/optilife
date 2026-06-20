@@ -28,12 +28,12 @@ export default async function handler(req, res) {
       Weight: ${profile?.weight || 'not specified'} kg
       Height: ${profile?.height || 'not specified'} cm
       
-      Abnormal or out-of-range lab blood test markers identified for this user:
+      Abnormal or out-of-range lab blood test markers identified for this user across all their historical tests (format: marker, value, unit, date):
       ${abnormalMarkers && abnormalMarkers.length > 0 
-        ? JSON.stringify(abnormalMarkers.map(m => `${m.marker_name}: ${m.measured_value} ${m.unit || ''}`), null, 2)
+        ? JSON.stringify(abnormalMarkers.map(m => `${m.marker_name}: ${m.measured_value} ${m.unit || ''} (Date: ${m.test_date})`), null, 2)
         : 'None (All markers are in normal ranges).'}
       
-      Your goal is to guide the user in improving their health, diet, fitness, and lifestyle based on their specific health status and out-of-range markers.
+      Your goal is to guide the user in improving their overall health, diet, fitness, and lifestyle. You are not limited to just discussing the latest blood test; you should act as a comprehensive health coach based on their specific health status, trends across time, and out-of-range markers.
       
       CRITICAL GUIDELINES:
       1. Keep your tone supportive, professional, and empathetic.

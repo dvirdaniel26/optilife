@@ -4,16 +4,14 @@ import { NotificationsContext } from '../context/NotificationsContext';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Send, Sparkles, Lock, Brain, ShieldAlert, ArrowLeft, Check, 
-  Activity, Apple, Calendar, TrendingUp, Pill, ChevronLeft, 
-  Loader2, User, HelpCircle, MessageSquare
+  Send, Sparkles, Lock, Brain, ShieldAlert, ChevronLeft, 
+  Activity, Apple, TrendingUp, Pill, Loader2, User, MessageSquare, Plus, Menu, X
 } from 'lucide-react';
 
 export default function AiCoachPage() {
-  const { session, profile, setProfile } = useContext(UserContext);
+  const { session, profile } = useContext(UserContext);
   const { addNotification } = useContext(NotificationsContext);
   const navigate = useNavigate();
-  const isFemale = profile?.gender === 'female';
   const isSubscriber = profile?.subscription_tier === 'ai_ultimate';
 
   const renderMessageText = (text, isAiSender) => {
@@ -37,8 +35,12 @@ export default function AiCoachPage() {
   // State for loading DB tests
   const [dbLoading, setDbLoading] = useState(true);
   const [latestTestInfo, setLatestTestInfo] = useState(null);
-  const [abnormalMarkers, setAbnormalMarkers] = useState([]);
+  const [abnormalMarkers, setAbnormalMarkers] = useState([]); // All abnormal markers from all time
+  
+  // Chat History State
+  const [chatsList, setChatsList] = useState([]);
   const [chatId, setChatId] = useState(null);
+  const [showMobileHistory, setShowMobileHistory] = useState(false);
 
   // Chat State
   const [messages, setMessages] = useState([]);
@@ -46,58 +48,56 @@ export default function AiCoachPage() {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
 
-  // Load latest test results to customize AI response
+  // Load all tests and results
   useEffect(() => {
     if (!session?.user?.id || !isSubscriber) {
       setDbLoading(false);
       return;
     }
 
-    const fetchLatestBloodTest = async () => {
+    const fetchAllData = async () => {
       try {
         setDbLoading(true);
-        // 1. Get latest test metadata
+        // 1. Get ALL tests for this user with their lab_results
         const { data: tests, error: testsError } = await supabase
           .from('medical_tests')
-          .select('*')
+          .select('*, lab_results(*)')
           .eq('user_id', session.user.id)
           .order('test_date', { ascending: false });
 
         if (testsError) throw testsError;
 
+        let allAbnormal = [];
+        let latest = null;
+
         if (tests && tests.length > 0) {
-          const latest = tests[0];
+          latest = tests[0];
           setLatestTestInfo(latest);
 
-          // 2. Fetch results for this test
-          const { data: results, error: resultsError } = await supabase
-            .from('lab_results')
-            .select('*')
-            .eq('test_id', latest.id);
-
-          if (resultsError) throw resultsError;
-
-          if (results && results.length > 0) {
-            const abnormal = results.filter(r => r.is_abnormal);
-            setAbnormalMarkers(abnormal);
-
-            await loadOrCreateChat(latest, abnormal);
-          } else {
-            await loadOrCreateChat(latest, []);
-          }
-        } else {
-          // No tests at all
-          await loadOrCreateChat(null, []);
+          tests.forEach(test => {
+            if (test.lab_results && Array.isArray(test.lab_results)) {
+              const testAbnormal = test.lab_results
+                .filter(r => r.is_abnormal)
+                .map(r => ({
+                  ...r,
+                  test_date: test.test_date
+                }));
+              allAbnormal = [...allAbnormal, ...testAbnormal];
+            }
+          });
+          setAbnormalMarkers(allAbnormal);
         }
+
+        await loadChatsAndCurrent(latest, allAbnormal);
       } catch (err) {
         console.error("Error loading test details for AI Coach:", err);
-        await loadOrCreateChat(null, []);
+        await loadChatsAndCurrent(null, []);
       } finally {
         setDbLoading(false);
       }
     };
 
-    fetchLatestBloodTest();
+    fetchAllData();
   }, [session?.user?.id, isSubscriber]);
 
   // Scroll to bottom on new messages
@@ -107,36 +107,44 @@ export default function AiCoachPage() {
 
   const generateWelcomeText = (latestTest, abnormalList) => {
     const name = profile?.first_name || 'אורח/ת';
-    let welcomeText = `שלום ${name}! אני מאמן הבריאות ה-AI האישי שלך. 🤖🧬\n\n`;
+    let welcomeText = `שלום ${name}! אני מאמן הבריאות ה-AI האישי שלך. 🤖\n\n`;
 
     if (!latestTest) {
-      welcomeText += `נכון לעכשיו, לא מצאתי בדיקות דם פעילות שהעלית למערכת. על מנת שאוכל לתת לך הנחיות מדויקות, מומלץ להעלות בדיקה חדשה בדף 'ניתוח בדיקות'.\n\nבינתיים, אשמח לענות על כל שאלה בנושאי תזונה, ספורט ואורח חיים בריא! במה נרצה להתחיל?`;
+      welcomeText += `נכון לעכשיו, לא מצאתי בדיקות דם במערכת. בינתיים, אשמח לענות על שאלות כלליות בנושאי בריאות. במה נתחיל?`;
     } else {
-      welcomeText += `ניתחתי את בדיקת הדם האחרונה שלך מתאריך **${latestTest.test_date}**.\n\n`;
+      welcomeText += `קראתי ולמדתי את כל בדיקות הדם שלך, כולל הבדיקה האחרונה מ-${latestTest.test_date}.\n\n`;
 
       if (abnormalList.length > 0) {
-        const markersNames = abnormalList.map(m => `**${m.marker_name}** (${m.measured_value} ${m.unit || ''})`).join(', ');
-        welcomeText += `שמתי לב למספר מדדים שחרגו מטווח הנורמה הרפואי: ${markersNames}.\n\nאני כאן כדי לעזור לך לאזן את המדדים הללו באמצעות המלצות תזונה, תוספים נכונים ואימונים מותאמים. במה תרצה/י להתמקד היום?`;
+        welcomeText += `זיהיתי לאורך הזמן חריגות במדדים כמו: ${[...new Set(abnormalList.map(m => m.marker_name))].join(', ')}.\n\n`;
+        welcomeText += `אני כאן כדי לעזור לך לאזן אותם עם תזונה, תוספים וכושר. במה תרצה/י להתמקד היום?`;
       } else {
-        welcomeText += `כל הכבוד! כל המדדים המרכזיים שנסקרו בבדיקה שלך נמצאו מאוזנים ובטווח הנורמה. 🏆\n\nאנחנו יכולים להתמקד בשימור המצב הבריאותי המצוין, שיפור רמות האנרגיה או בבניית תפריט כושר מותאם. במה תרצה/י שנתמקד?`;
+        welcomeText += `כל המדדים שלך נראים מצוין! במה נרצה להתמקד היום כדי לשמור על האנרגיה והבריאות?`;
       }
     }
     return welcomeText;
   };
 
-  const loadOrCreateChat = async (latestTest, abnormalList) => {
+  const loadChatsAndCurrent = async (latestTest, abnormalList, specificChatId = null) => {
     try {
-      const { data: chatThread } = await supabase
+      // Fetch all chats
+      const { data: allChats } = await supabase
         .from('coach_chats')
         .select('*')
         .eq('user_id', session.user.id)
-        .maybeSingle();
+        .order('created_at', { ascending: false });
+        
+      setChatsList(allChats || []);
 
-      let currentChatId = null;
-      let loadedMessages = [];
+      let currentChatId = specificChatId;
+      
+      if (!currentChatId && allChats && allChats.length > 0) {
+        currentChatId = allChats[0].id; // load latest by default
+      }
+      
+      setChatId(currentChatId);
 
-      if (chatThread) {
-        currentChatId = chatThread.id;
+      if (currentChatId) {
+        // Load messages for this chat
         const { data: msgs } = await supabase
           .from('coach_messages')
           .select('*')
@@ -144,39 +152,18 @@ export default function AiCoachPage() {
           .order('created_at', { ascending: true });
         
         if (msgs && msgs.length > 0) {
-          loadedMessages = msgs.map(m => ({
+          setMessages(msgs.map(m => ({
             id: m.id,
             sender: m.sender === 'user' ? 'user' : 'ai',
             text: m.text,
             time: new Date(m.created_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
-          }));
+          })));
+        } else {
+          setMessages([]);
         }
       } else {
-        const { data: newChat } = await supabase
-          .from('coach_chats')
-          .insert([{ user_id: session.user.id }])
-          .select()
-          .single();
-          
-        if (newChat) {
-          currentChatId = newChat.id;
-        }
-      }
-      
-      setChatId(currentChatId);
-
-      if (loadedMessages.length > 0) {
-        setMessages(loadedMessages);
-      } else {
+        // No chats exist at all
         const welcomeText = generateWelcomeText(latestTest, abnormalList);
-        if (currentChatId) {
-          await supabase.from('coach_messages').insert([{
-             chat_id: currentChatId,
-             user_id: session.user.id,
-             sender: 'ai',
-             text: welcomeText
-          }]);
-        }
         setMessages([{
            id: 'welcome',
            sender: 'ai',
@@ -184,9 +171,23 @@ export default function AiCoachPage() {
            time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
         }]);
       }
+      
+      setShowMobileHistory(false); // Close mobile menu if it was open
     } catch (e) {
       console.error("Error loading chat history:", e);
     }
+  };
+
+  const startNewChat = () => {
+    setChatId(null);
+    const welcomeText = generateWelcomeText(latestTestInfo, abnormalMarkers);
+    setMessages([{
+       id: 'welcome',
+       sender: 'ai',
+       text: welcomeText,
+       time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+    }]);
+    setShowMobileHistory(false);
   };
 
   const handleSendMessage = async (e) => {
@@ -206,9 +207,37 @@ export default function AiCoachPage() {
     setIsTyping(true);
 
     try {
-      if (chatId) {
+      let activeChatId = chatId;
+      
+      // If this is a new chat, create the thread first
+      if (!activeChatId) {
+        const title = userText.substring(0, 30) + (userText.length > 30 ? '...' : '');
+        const { data: newChat } = await supabase
+          .from('coach_chats')
+          .insert([{ user_id: session.user.id, title }])
+          .select().single();
+          
+        if (newChat) {
+           activeChatId = newChat.id;
+           setChatId(activeChatId);
+           setChatsList(prev => [newChat, ...prev]);
+           
+           // Also save the welcome message that was just local
+           const welcomeMsg = messages.find(m => m.id === 'welcome');
+           if (welcomeMsg) {
+             await supabase.from('coach_messages').insert([{
+               chat_id: activeChatId,
+               user_id: session.user.id,
+               sender: 'ai',
+               text: welcomeMsg.text
+             }]);
+           }
+        }
+      }
+
+      if (activeChatId) {
         await supabase.from('coach_messages').insert([{
-           chat_id: chatId,
+           chat_id: activeChatId,
            user_id: session.user.id,
            sender: 'user',
            text: userText
@@ -221,7 +250,7 @@ export default function AiCoachPage() {
         body: JSON.stringify({
           query: userText,
           profile: profile,
-          abnormalMarkers: abnormalMarkers,
+          abnormalMarkers: abnormalMarkers, // Now passing ALL abnormal markers across all time
           history: messages
         })
       });
@@ -229,9 +258,9 @@ export default function AiCoachPage() {
       const data = await response.json();
       const aiReply = data.reply || 'מצטער, נתקלתי בבעיה קטנה בעיבוד התשובה. תוכל לנסח שוב?';
 
-      if (chatId) {
+      if (activeChatId) {
         await supabase.from('coach_messages').insert([{
-           chat_id: chatId,
+           chat_id: activeChatId,
            user_id: session.user.id,
            sender: 'ai',
            text: aiReply
@@ -355,28 +384,68 @@ export default function AiCoachPage() {
         <div className="p-4 md:p-6 lg:p-8 max-w-7xl w-full mx-auto flex flex-col gap-6 flex-1 min-h-0 overflow-hidden" dir="rtl">
           
           {/* Header */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-sm pb-xs border-b border-outline-variant">
-            <div>
-              <h2 className="font-heading text-3xl text-primary font-bold flex items-center gap-sm">
-                <Brain className="w-8 h-8 text-secondary shrink-0" />
-                מאמן בריאות AI אישי
-              </h2>
-              <p className="font-body text-xs text-on-surface-variant mt-1 flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping shrink-0" />
-                <span>מחובר • מנתח בדיקות דם מהמערכת</span>
-              </p>
-            </div>
-            {latestTestInfo && (
-              <div className="text-left text-[10px] text-slate-400 bg-white/60 border border-slate-100 rounded-xl px-3 py-1.5 self-start sm:self-center">
-                בדיקה אחרונה בשימוש: <span className="font-bold text-secondary">{latestTestInfo.test_date}</span>
+          <div className="flex justify-between items-center pb-xs border-b border-outline-variant">
+            <div className="flex items-center gap-2">
+              <button 
+                className="lg:hidden p-2 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 active:scale-95 transition-colors border-0 cursor-pointer"
+                onClick={() => setShowMobileHistory(!showMobileHistory)}
+              >
+                {showMobileHistory ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
+              <div>
+                <h2 className="font-heading text-2xl md:text-3xl text-primary font-bold flex items-center gap-sm">
+                  <Brain className="w-7 h-7 md:w-8 md:h-8 text-secondary shrink-0" />
+                  מאמן בריאות AI
+                </h2>
+                <p className="font-body text-[10px] md:text-xs text-on-surface-variant mt-1 flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping shrink-0" />
+                  <span>מחובר • מנתח את כל היסטוריית המדדים</span>
+                </p>
               </div>
-            )}
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start flex-1 min-h-0 overflow-hidden">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start flex-1 min-h-0 overflow-hidden relative">
             
+            {/* MOBILE OVERLAY FOR CHAT HISTORY */}
+            {showMobileHistory && (
+              <div className="absolute inset-0 bg-white z-10 lg:hidden flex flex-col rounded-3xl custom-shadow overflow-hidden p-4">
+                <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-100">
+                  <h3 className="font-bold text-primary flex items-center gap-2">
+                    <MessageSquare className="w-5 h-5 text-secondary" />
+                    היסטוריית שיחות
+                  </h3>
+                  <button 
+                    onClick={startNewChat}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-secondary text-white rounded-lg text-xs font-bold active:scale-95 transition-all border-0 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    שיחה חדשה
+                  </button>
+                </div>
+                <div className="overflow-y-auto flex-1 flex flex-col gap-2">
+                  {chatsList.length === 0 ? (
+                    <p className="text-xs text-slate-400 text-center py-4">אין שיחות קודמות</p>
+                  ) : (
+                    chatsList.map(c => (
+                      <button
+                        key={c.id}
+                        onClick={() => loadChatsAndCurrent(latestTestInfo, abnormalMarkers, c.id)}
+                        className={`text-right p-3 rounded-xl text-sm transition-colors border-0 cursor-pointer ${chatId === c.id ? 'bg-secondary/10 border-l-4 border-l-secondary text-secondary font-bold' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}
+                      >
+                        <div className="truncate mb-1">{c.title || 'שיחה ללא כותרת'}</div>
+                        <div className="text-[10px] text-slate-400 font-normal">
+                          {new Date(c.created_at).toLocaleDateString('he-IL')}
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* RIGHT COLUMN: Interactive Chat Area */}
-            <div className="lg:col-span-8 bg-white border border-outline/10 rounded-3xl p-4 md:p-6 lg:p-8 flex flex-col gap-4 custom-shadow h-[600px] md:h-[700px] relative">
+            <div className={`lg:col-span-8 bg-white border border-outline/10 rounded-3xl p-4 md:p-6 lg:p-8 flex flex-col gap-4 custom-shadow h-[600px] md:h-[700px] relative ${showMobileHistory ? 'hidden lg:flex' : 'flex'}`}>
               
               {/* Messages History */}
               <div className="flex-1 overflow-y-auto pr-2 flex flex-col gap-6 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
@@ -424,7 +493,7 @@ export default function AiCoachPage() {
                     <div className="flex flex-col gap-0.5">
                       <span className="text-[9px] font-bold text-slate-500">AI Health Coach</span>
                       <div className="px-sm py-2 rounded-2xl text-xs bg-slate-100 text-slate-500 rounded-tr-none flex items-center gap-1.5 border border-slate-200/50">
-                        <span>מחשב המלצות מדדים</span>
+                        <span>מחשב תשובה...</span>
                         <span className="flex gap-[3px]">
                           <span className="w-1 h-1 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '0ms' }} />
                           <span className="w-1 h-1 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -438,25 +507,19 @@ export default function AiCoachPage() {
               </div>
 
               {/* Quick Prompts Panel */}
-              {!dbLoading && (
+              {!dbLoading && messages.length <= 1 && (
                 <div className="flex flex-nowrap gap-2 pt-4 pb-2 border-t border-outline/10 overflow-x-auto scrollbar-none">
                   <button 
-                    onClick={() => selectQuickPrompt('מה לאכול כדי לשפר את בדיקות הדם שלי?')}
+                    onClick={() => selectQuickPrompt('האם חל שיפור במצב הבריאותי שלי מהבדיקות הקודמות?')}
                     className="px-4 py-2 bg-slate-50 hover:bg-secondary/5 text-slate-600 hover:text-secondary rounded-xl text-xs font-bold transition-all border border-slate-200 hover:border-secondary/30 cursor-pointer active:scale-95 shrink-0 whitespace-nowrap shadow-sm"
                   >
-                    🍎 המלץ לי על ארוחת בוקר
+                    📈 מה המגמה של המדדים שלי?
                   </button>
                   <button 
                     onClick={() => selectQuickPrompt('איך מומלץ לאזן את רמת הסוכר והגלוקוז שלי?')}
                     className="px-4 py-2 bg-slate-50 hover:bg-secondary/5 text-slate-600 hover:text-secondary rounded-xl text-xs font-bold transition-all border border-slate-200 hover:border-secondary/30 cursor-pointer active:scale-95 shrink-0 whitespace-nowrap shadow-sm"
                   >
                     🍭 מדדי סוכר וגלוקוז
-                  </button>
-                  <button 
-                    onClick={() => selectQuickPrompt('איך לאזן כולסטרול וכולסטרול LDL?')}
-                    className="px-4 py-2 bg-slate-50 hover:bg-secondary/5 text-slate-600 hover:text-secondary rounded-xl text-xs font-bold transition-all border border-slate-200 hover:border-secondary/30 cursor-pointer active:scale-95 shrink-0 whitespace-nowrap shadow-sm"
-                  >
-                    🥩 הפחתת כולסטרול
                   </button>
                   <button 
                     onClick={() => selectQuickPrompt('מה לקחת ואיך נכון לספוג תוספי תזונה וויטמין D?')}
@@ -479,7 +542,7 @@ export default function AiCoachPage() {
                       handleSendMessage();
                     }
                   }}
-                  placeholder="שאל את ה-AI על בדיקות הדם, תפריט מומלץ או תוספי תזונה..."
+                  placeholder="שאל את ה-AI על כל המצב הבריאותי שלך, תפריט מומלץ או חריגות בדם..."
                   required
                   disabled={dbLoading || isTyping}
                   className="flex-1 px-4 py-3 md:py-3.5 bg-transparent text-sm focus:outline-none transition-all leading-relaxed resize-none disabled:opacity-50 text-right font-body min-h-[44px] max-h-[120px]" dir="rtl"
@@ -494,29 +557,41 @@ export default function AiCoachPage() {
               </form>
             </div>
 
-            {/* LEFT COLUMN: Health Coach Stats Card */}
-            <div className="lg:col-span-4 flex flex-col gap-6">
+            {/* LEFT COLUMN: Health Coach Stats Card & Desktop History */}
+            <div className={`lg:col-span-4 flex flex-col gap-6 ${showMobileHistory ? 'hidden lg:flex' : 'hidden lg:flex'}`}>
               
-              {/* AI Assistant Bio Card */}
-              <div className="backdrop-blur-md bg-white/70 border border-white/20 rounded-3xl p-md custom-shadow flex flex-col gap-sm text-center">
-                <div className="w-16 h-16 rounded-2xl bg-secondary/10 text-secondary flex items-center justify-center mx-auto mb-xs">
-                  <Activity className="w-8 h-8" />
+              {/* Desktop Chat History Card */}
+              <div className="bg-white border border-slate-100 rounded-3xl p-md custom-shadow flex flex-col gap-3 max-h-[300px]">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                  <h3 className="font-heading text-sm text-primary font-bold flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4 text-secondary" />
+                    היסטוריית שיחות
+                  </h3>
+                  <button 
+                    onClick={startNewChat}
+                    className="flex items-center gap-1 px-2 py-1 bg-secondary/10 hover:bg-secondary/20 text-secondary rounded-lg text-xs font-bold transition-colors cursor-pointer border-0"
+                  >
+                    <Plus className="w-3 h-3" />
+                    שיחה חדשה
+                  </button>
                 </div>
-                <h3 className="font-heading text-base text-primary font-bold">איך ה-AI מסייע לך?</h3>
-                <p className="text-[10px] text-slate-500 leading-relaxed text-right">
-                  מאמן הבריאות של OptiLife AI תוכנת ללמוד את בדיקות הדם שלך ולתרגם אותן להמלצות יומיות מעשיות.
-                </p>
-                <div className="border-t border-slate-100 my-xs pt-xs text-right space-y-xs text-[10px] text-slate-650">
-                  <div className="flex justify-between">
-                    <span className="font-bold text-primary">ניתוח בדיקה אחרונה:</span>
-                    <span>{latestTestInfo ? latestTestInfo.test_date : 'אין נתונים'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-bold text-primary">חריגות שזוהו:</span>
-                    <span className={abnormalMarkers.length > 0 ? 'text-status-error font-extrabold' : 'text-status-success font-extrabold'}>
-                      {abnormalMarkers.length > 0 ? `${abnormalMarkers.length} מדדים` : 'מאוזן'}
-                    </span>
-                  </div>
+                <div className="flex flex-col gap-2 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-200">
+                  {chatsList.length === 0 ? (
+                    <p className="text-xs text-slate-400 text-center py-4">אין שיחות קודמות</p>
+                  ) : (
+                    chatsList.map(c => (
+                      <button
+                        key={c.id}
+                        onClick={() => loadChatsAndCurrent(latestTestInfo, abnormalMarkers, c.id)}
+                        className={`text-right p-3 rounded-xl text-xs transition-colors border-0 cursor-pointer ${chatId === c.id ? 'bg-secondary/10 border-r-2 border-secondary text-secondary font-bold' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}
+                      >
+                        <div className="truncate mb-1">{c.title || 'שיחה ללא כותרת'}</div>
+                        <div className="text-[10px] text-slate-400 font-normal">
+                          {new Date(c.created_at).toLocaleDateString('he-IL')}
+                        </div>
+                      </button>
+                    ))
+                  )}
                 </div>
               </div>
 

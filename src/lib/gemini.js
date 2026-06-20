@@ -59,7 +59,7 @@ export const analyzeMedicalImage = async (base64Data, mimeType, previousResults 
         }
       `;
 
-      const cleanBase64 = base64Data.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, '');
+      const cleanBase64 = base64Data.replace(/^data:(image\/(png|jpeg|jpg|webp)|application\/pdf);base64,/, '');
       const imageParts = [{ inlineData: { data: cleanBase64, mimeType } }];
 
       const result = await model.generateContent([prompt, ...imageParts]);

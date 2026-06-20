@@ -97,13 +97,13 @@ export default function TestAnalysisPage() {
 
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
-    if (file && file.type.startsWith('image/')) {
+    if (file && (file.type.startsWith('image/') || file.type === 'application/pdf')) {
       setSelectedFile(file);
       setPreviewUrl(URL.createObjectURL(file));
       setError(null);
       setPendingResult(null);
     } else {
-      setError('יש לבחור קובץ תמונה (JPEG, PNG). תמיכה ב-PDF תתווסף בהמשך.');
+      setError('יש לבחור קובץ תמונה (JPEG, PNG) או מסמך PDF.');
     }
   };
 
@@ -389,7 +389,7 @@ export default function TestAnalysisPage() {
             type="file"
             ref={fileInputRef}
             onChange={handleFileSelect}
-            accept="image/jpeg, image/png, image/webp"
+            accept="image/jpeg, image/png, image/webp, application/pdf"
             className="hidden"
           />
 
@@ -507,8 +507,15 @@ export default function TestAnalysisPage() {
                 previewUrl ? (
                   /* Image Preview Card */
                   <div className="bg-white rounded-3xl p-8 border border-outline/10 custom-shadow flex flex-col md:flex-row items-center gap-8 animate-in fade-in duration-300">
-                    <div className="relative shrink-0 w-full md:w-56 h-56 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-center overflow-hidden shadow-inner">
-                      <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                    <div className="relative shrink-0 w-full md:w-56 h-56 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-center overflow-hidden shadow-inner flex-col">
+                      {selectedFile?.type === 'application/pdf' ? (
+                        <>
+                          <FileText className="w-16 h-16 text-rose-500 mb-2" />
+                          <span className="font-bold text-sm text-rose-600">קובץ PDF</span>
+                        </>
+                      ) : (
+                        <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                      )}
                       <button
                         onClick={() => {
                           setSelectedFile(null);
@@ -581,7 +588,7 @@ export default function TestAnalysisPage() {
                       {isFemale ? 'לחצי לבחירת תמונה של הבדיקות' : 'לחץ לבחירת תמונה של הבדיקות'}
                     </h3>
                     <p className="font-body text-sm text-on-surface-variant mb-6 text-center max-w-sm">
-                      גררי לכאן או לחצי לבחירת קובץ. תומך בפורמטים JPEG, PNG ו-WEBP
+                      גררי לכאן או לחצי לבחירת קובץ. תומך בפורמטים תמונה (JPEG, PNG) ומסמכי PDF
                     </p>
                     <span className="px-5 py-2 rounded-xl bg-secondary text-white font-bold text-sm hover:bg-secondary/90 transition-colors shadow-sm">
                       בחירת קובץ

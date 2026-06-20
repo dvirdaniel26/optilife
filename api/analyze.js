@@ -58,7 +58,7 @@ export default async function handler(req, res) {
       }
     `;
 
-    const cleanBase64 = base64Data.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, '');
+    const cleanBase64 = base64Data.replace(/^data:(image\/(png|jpeg|jpg|webp)|application\/pdf);base64,/, '');
 
     const imageParts = [
       {

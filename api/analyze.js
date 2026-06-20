@@ -27,11 +27,17 @@ export default async function handler(req, res) {
       Identify if there is any test date, collection date, or report date listed in the document.
       Provide a structured, beautifully formatted medical summary in HEBREW based on the overall results.
       
-      CRITICAL FORMATTING RULES FOR THE HEBREW SUMMARY:
-      1. Divide the summary into multiple clean paragraphs separated by TWO newlines (\\n\\n).
-      2. Use bullet points starting with a dash (e.g. "- **שם המדד**") to list abnormal markers, key findings, and general wellness recommendations.
-      3. Bold important health markers and their values/status using double asterisks (e.g., **גלוקוז** (112), **ויטמין D**).
-      4. DO NOT return a single solid block of text. Make it easy to read, inviting, and professional.
+      CRITICAL FORMATTING RULES FOR THE HEBREW SUMMARY — READ CAREFULLY:
+      1. Write a HOLISTIC NARRATIVE ANALYSIS in Hebrew — like a doctor explaining results in a consultation. DO NOT list each marker one by one.
+      2. The table of individual markers is shown separately. The summary should ADD VALUE by connecting the dots: explain what the overall picture means, how markers relate to each other, what patterns you see.
+      3. Structure the summary as 2-4 readable paragraphs (separated by \\n\\n). Each paragraph covers a theme:
+         - Paragraph 1: Overall impression and key findings (e.g., "Most results look healthy, but there are a few areas worth attention...")
+         - Paragraph 2: Connect the abnormal markers — what do they suggest together? (e.g., low Vitamin D + elevated ALT may suggest...)
+         - Paragraph 3 (optional): Practical lifestyle recommendations based on the pattern
+         - Paragraph 4 (optional): If comparison data exists, describe trends over time
+      4. Bold key medical terms and values using double asterisks (e.g., **ויטמין D**, **ALT**).
+      5. DO NOT repeat each marker's value — that is shown in the table. Focus on meaning, patterns, and clinical significance.
+      6. Write warmly and professionally, as if addressing the patient directly.
 
       ${previousResults ? `
       CRITICAL COMPARISON: Compare the new results with the following previous blood test results and specify if there is any improvement, worsening, or stable trends for key metrics (like glucose, cholesterol, etc.) in the Hebrew summary:

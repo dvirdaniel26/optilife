@@ -81,18 +81,17 @@ export default function AiCoachPage() {
             const abnormal = results.filter(r => r.is_abnormal);
             setAbnormalMarkers(abnormal);
 
-            // Populate initial customized greeting message
-            initializeChat(latest, abnormal);
+            await loadOrCreateChat(latest, abnormal);
           } else {
-            initializeChat(latest, []);
+            await loadOrCreateChat(latest, []);
           }
         } else {
           // No tests at all
-          initializeChat(null, []);
+          await loadOrCreateChat(null, []);
         }
       } catch (err) {
         console.error("Error loading test details for AI Coach:", err);
-        initializeChat(null, []);
+        await loadOrCreateChat(null, []);
       } finally {
         setDbLoading(false);
       }
@@ -106,7 +105,7 @@ export default function AiCoachPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
-  const initializeChat = (latestTest, abnormalList) => {
+  const generateWelcomeText = (latestTest, abnormalList) => {
     const name = profile?.first_name || 'אורח/ת';
     let welcomeText = `שלום ${name}! אני מאמן הבריאות ה-AI האישי שלך. 🤖🧬\n\n`;
 
@@ -122,155 +121,138 @@ export default function AiCoachPage() {
         welcomeText += `כל הכבוד! כל המדדים המרכזיים שנסקרו בבדיקה שלך נמצאו מאוזנים ובטווח הנורמה. 🏆\n\nאנחנו יכולים להתמקד בשימור המצב הבריאותי המצוין, שיפור רמות האנרגיה או בבניית תפריט כושר מותאם. במה תרצה/י שנתמקד?`;
       }
     }
+    return welcomeText;
+  };
 
-    setMessages([
-      {
-        id: 'welcome',
-        sender: 'ai',
-        text: welcomeText,
-        time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+  const loadOrCreateChat = async (latestTest, abnormalList) => {
+    try {
+      const { data: chatThread } = await supabase
+        .from('coach_chats')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+
+      let currentChatId = null;
+      let loadedMessages = [];
+
+      if (chatThread) {
+        currentChatId = chatThread.id;
+        const { data: msgs } = await supabase
+          .from('coach_messages')
+          .select('*')
+          .eq('chat_id', currentChatId)
+          .order('created_at', { ascending: true });
+        
+        if (msgs && msgs.length > 0) {
+          loadedMessages = msgs.map(m => ({
+            id: m.id,
+            sender: m.sender_role === 'user' ? 'user' : 'ai',
+            text: m.content,
+            time: new Date(m.created_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+          }));
+        }
+      } else {
+        const { data: newChat } = await supabase
+          .from('coach_chats')
+          .insert([{ user_id: session.user.id }])
+          .select()
+          .single();
+          
+        if (newChat) {
+          currentChatId = newChat.id;
+        }
       }
-    ]);
+      
+      setChatId(currentChatId);
+
+      if (loadedMessages.length > 0) {
+        setMessages(loadedMessages);
+      } else {
+        const welcomeText = generateWelcomeText(latestTest, abnormalList);
+        if (currentChatId) {
+          await supabase.from('coach_messages').insert([{
+             chat_id: currentChatId,
+             sender_role: 'ai',
+             content: welcomeText
+          }]);
+        }
+        setMessages([{
+           id: 'welcome',
+           sender: 'ai',
+           text: welcomeText,
+           time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+        }]);
+      }
+    } catch (e) {
+      console.error("Error loading chat history:", e);
+    }
   };
 
   const handleSendMessage = async (e) => {
     if (e) e.preventDefault();
     if (!inputText.trim() || isTyping) return;
 
-    const userMsg = {
-      id: 'msg_' + Date.now(),
+    const userText = inputText.trim();
+    const userMsgLocal = {
+      id: 'msg_local_' + Date.now(),
       sender: 'user',
-      text: inputText.trim(),
+      text: userText,
       time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
     };
 
-    setMessages(prev => [...prev, userMsg]);
+    setMessages(prev => [...prev, userMsgLocal]);
     setInputText('');
     setIsTyping(true);
 
-    // Simulate AI response logic
-    setTimeout(() => {
-      const aiReplyText = generateAiResponse(userMsg.text);
-      const aiMsg = {
+    try {
+      if (chatId) {
+        await supabase.from('coach_messages').insert([{
+           chat_id: chatId,
+           sender_role: 'user',
+           content: userText
+        }]);
+      }
+
+      const response = await fetch('/api/coach-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: userText,
+          profile: profile,
+          abnormalMarkers: abnormalMarkers,
+          history: messages
+        })
+      });
+
+      const data = await response.json();
+      const aiReply = data.reply || 'מצטער, נתקלתי בבעיה קטנה בעיבוד התשובה. תוכל לנסח שוב?';
+
+      if (chatId) {
+        await supabase.from('coach_messages').insert([{
+           chat_id: chatId,
+           sender_role: 'ai',
+           content: aiReply
+        }]);
+      }
+
+      const aiMsgLocal = {
         id: 'msg_ai_' + Date.now(),
         sender: 'ai',
-        text: aiReplyText,
+        text: aiReply,
         time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
       };
-      setMessages(prev => [...prev, aiMsg]);
+      setMessages(prev => [...prev, aiMsgLocal]);
+
+    } catch (error) {
+       console.error("Chat error:", error);
+       addNotification({ type: 'error', title: 'שגיאה', message: 'לא הצלחנו להתחבר לשרת ה-AI. נסה שוב.' });
+    } finally {
       setIsTyping(false);
-    }, 1800 + Math.random() * 1000); // 1.8s - 2.8s realistic typing latency
+    }
   };
 
   const selectQuickPrompt = (text) => {
     setInputText(text);
-  };
-
-  const generateAiResponse = (query) => {
-    const q = query.toLowerCase();
-    const name = profile?.first_name || '';
-    const hasAbnormalGlucose = abnormalMarkers.some(m => m.marker_name.toLowerCase().includes('glucos') || m.marker_name.includes('גלוקוז') || m.marker_name.toLowerCase().includes('סוכר'));
-    const hasAbnormalChol = abnormalMarkers.some(m => m.marker_name.toLowerCase().includes('cholest') || m.marker_name.includes('כולסטרול'));
-    const hasAbnormalIron = abnormalMarkers.some(m => m.marker_name.toLowerCase().includes('iron') || m.marker_name.includes('ברזל') || m.marker_name.toLowerCase().includes('hemo') || m.marker_name.includes('המוגלובין'));
-
-    // 1. Glucose / Blood sugar
-    if (q.includes('סוכר') || q.includes('גלוקוז') || q.includes('סכרת') || q.includes('סוכרת') || q.includes('sugar') || q.includes('glucose')) {
-      let response = `איזון רמות הסוכר בדם הוא קריטי לשמירה על אנרגיה יציבה ומניעת תנגודת לאינסולין. `;
-      if (hasAbnormalGlucose) {
-        response += `בהתחשב בבדיקת הדם האחרונה שלך, שבה רמת הגלוקוז הייתה חריגה, מומלץ במיוחד להקפיד על ההנחיות הבאות:\n\n`;
-      } else {
-        response += `הנה ההמלצות המרכזיות לאיזון רמות הסוכר:\n\n`;
-      }
-      response += `1. **שילוב סיבים תזונתיים:** הקפד/י לאכול ירקות לא עמילניים (עלים ירוקים, מלפפון, ברוקולי) לפני הפחמימה בארוחה. הסיבים מאטים את ספיגת הסוכר לדם.\n`;
-      response += `2. **פחמימות מורכבות:** העדיפ/י פחמימות מלאות (בטטה, קוואקר, קינואה, קטניות) על פני פחמימות פשוטות (קמח לבן, סוכר מעובד).\n`;
-      response += `3. **סדר הארוחה (Food Sequencing):** הוכח מדעית שאכילת חלבון ושומן תחילה, ורק בסוף הארוחה את הפחמימה, מורידה את עקומת הסוכר בעשרות אחוזים.\n`;
-      response += `4. **הליכה קלה לאחר הארוחה:** הליכה של 10-15 דקות מיד לאחר הארוחה גורמת לשרירים לצרוך את הגלוקוז ישירות ללא צורך בהפרשת אינסולין מוגברת.\n\n**עצה תזונתית קלה:** נסו לשלב כף חומץ תפוחים טבעי מהולה בכוס מים כ-15 דקות לפני הארוחה הגדולה של היום – זה מסייע מאוד בריסון מדדי הסוכר.`;
-      return response;
-    }
-
-    // 2. Cholesterol / Fats
-    if (q.includes('כולסטרול') || q.includes('שומנים') || q.includes('טריגליצרידים') || q.includes('cholesterol') || q.includes('ldl') || q.includes('hdl')) {
-      let response = `כולסטרול הוא רכיב חיוני בגוף, אך חריגה ברמות ה-LDL (הכולסטרול ה"רע") עלולה להצביע על חמצון שומנים מוגבר בכלי הדם. `;
-      if (hasAbnormalChol) {
-        response += `מאחר והבדיקה שלך מציגה כולסטרול חריג, ההמלצות הבאות מותאמות במיוחד עבורך:\n\n`;
-      } else {
-        response += `הנה דרכים טבעיות ומבוססות מחקר לאיזון רמות הכולסטרול:\n\n`;
-      }
-      response += `1. **הפחתת שומן רווי מעובד:** יש לצמצם שומני טראנס, בשרים מעובדים (נקניקיות, המבורגרים מוכנים) ומאפים תעשייתיים.\n`;
-      response += `2. **העשרת שומנים חד-בלתי רווים:** שמן זית כתית מעולה, אבוקדו, שקדים ואגוזי מלך מסייעים בשיפור יחס הכולסטרול בגוף.\n`;
-      response += `3. **סיבים מסיסים (שיבולת שועל וקטניות):** שיבולת שועל מכילה סיב מיוחד בשם בטא-גלוקן, אשר נקשר לכולסטרול במערכת העיכול ומסייע בפינויו מהגוף.\n`;
-      response += `4. **שילוב אומגה 3:** דגי ים שמנים (סלמון, מקרל, סרדינים) או זרעי צ'יה ופשתן מסייעים בהפחתת טריגליצרידים.\n\n**המלצה אישית:** מומלץ לשלב 2 כפות זרעי פשתן טחונים טריים ביוגורט או דייסה מדי בוקר.`;
-      return response;
-    }
-
-    // 3. Iron / Hemoglobin / Anemia
-    if (q.includes('ברזל') || q.includes('המוגלובין') || q.includes('אנמיה') || q.includes('פריטין') || q.includes('iron') || q.includes('hemoglobin') || q.includes('ferritin')) {
-      let response = `ברזל הוא המרכיב העיקרי בהמוגלובין, האחראי על הובלת החמצן לתאי הגוף. רמות נמוכות מובילות לעייפות, נשירת שיער וקוצר נשימה במאמץ. `;
-      if (hasAbnormalIron) {
-        response += `מאחר ובמדדים שלך מופיע חוסר בברזל/המוגלובין, הנה פרוטוקול טיפול תזונתי מומלץ עבורך:\n\n`;
-      } else {
-        response += `הנה הדרכים המומלצות לשיפור רמות הברזל בגוף:\n\n`;
-      }
-      response += `1. **שילוב ברזל מן החי (Heme Iron):** נספג בצורה הטובה ביותר בגוף. מקורות טובים הם בשר בקר רזה, הודו אדום ואיברים פנימיים.\n`;
-      response += `2. **ברזל מן הצומח (Non-Heme Iron):** מקורות כגון עדשים שחורות, טחינה גולמית משומשום מלא, קינואה, ותרד.\n`;
-      response += `3. **תוספת ויטמין C:** ויטמין C משפר את ספיגת הברזל במאות אחוזים! מומלץ לסחוט לימון טרי על הקטניות או לאכול פלפל אדום/תפוז לצד הארוחה.\n`;
-      response += `4. **מניעת חוסמי ספיגה:** **חשוב מאוד!** קפאין (קפה, תה שחור/ירוק), קקאו, ומוצרי חלב (סידן) מונעים ספיגת ברזל. יש להפריד ביניהם לפחות שעתיים מהארוחה המכילה ברזל.\n\n**טיפ לבוקר:** נסו לאכול 2 כפות טחינה גולמית משומשום מלא יחד עם כפית דבש סילאן טבעי וכמה טיפות לימון – זוהי פצצת ברזל מעולה מהצומח.`;
-      return response;
-    }
-
-    // 4. Menu Planner / Recipes
-    if (q.includes('תפריט') || q.includes('מתכון') || q.includes('מתכונים') || q.includes('אכול') || q.includes('לאכול') || q.includes('ארוח') || q.includes('menu') || q.includes('diet') || q.includes('recipe')) {
-      let dietFocus = "מאוזן וכללי";
-      let focusTip = "שמירה על אורח חיים בריא.";
-
-      if (hasAbnormalGlucose) {
-        dietFocus = "דל פחמימות פשוטות ומאזן סוכר";
-        focusTip = "הפחתת גלוקוז בדם ומניעת סוכרת.";
-      } else if (hasAbnormalChol) {
-        dietFocus = "ים תיכוני דל שומן רווי";
-        focusTip = "הורדת כולסטרול LDL ושיפור מדדי שומנים.";
-      } else if (hasAbnormalIron) {
-        dietFocus = "עשיר בברזל וויטמין C ללא חוסמי ספיגה";
-        focusTip = "שיפור רמות המוגלובין וטיפול באנמיה ועייפות.";
-      }
-
-      let response = `הנה הצעה לתפריט יומי ממוקד מטרה: **תפריט ${dietFocus}** במטרה לסייע ב${focusTip}\n\n`;
-      response += `🟢 **ארוחת בוקר:**\n`;
-      if (hasAbnormalIron) {
-        response += `* דייסת שיבולת שועל על בסיס מים עם זרעי צ'יה, תותים טריים (עשירים בויטמין C לשיפור ספיגה) וחופן שקדים. *להימנע מקפה עד שעה לאחר הארוחה.*\n\n`;
-      } else if (hasAbnormalGlucose) {
-        response += `* ביצים (מקושקשת או עין) עם רבע אבוקדו, סלט ירוק עשיר (עלים, מלפפון) עם שמן זית ופרוסת לחם כוסמין מלא אחת.\n\n`;
-      } else {
-        response += `* יוגורט חלבון עיזים או סויה טבעי עם כף זרעי פשתן טחונים, כפית זרעי דלעת וחצי כוס פירות יער.\n\n`;
-      }
-
-      response += `🟡 **ארוחת צהריים:**\n`;
-      if (hasAbnormalChol) {
-        response += `* פילה סלמון בתנור עם שום ושמיר (עשיר באומגה 3), לצד קינואה מבושלת וברוקולי מאודה בשמן זית כתית מעולה.\n\n`;
-      } else if (hasAbnormalIron) {
-        response += `* חזה עוף או הודו אדום צלוי, לצד תבשיל עדשים שחורות וסלט פלפלים צבעוניים עם מיץ לימון סחוט טרי.\n\n`;
-      } else {
-        response += `* חזה עוף צלוי או טופו במרינרדת עשבי תיבול, לצד בטטה אפויה וסלט ירקות צבעוני גדול עם שמן זית.\n\n`;
-      }
-
-      response += `🔴 **ארוחת ערב:**\n`;
-      response += `* מרק עדשים סמיך או מרק ירקות עשיר עם קוביית גבינת פטה עיזים/טופו, בתוספת סלט עלים ירוקים (רוקט, תרד, פטרוזיליה) ושמן שומשום.\n\n`;
-      response += `💡 **נשנוש ביניים בריא:** חופן אגוזי מלך (כ-5 יחידות) או שקדים לא קלויים יחד עם תפוח ירוק אחד.\n\n*הערה: ניתן להתאים את כמויות המזון לפי המשקל והגובה האישיים שלך.*`;
-      return response;
-    }
-
-    // 5. Medication and Supplements
-    if (q.includes('תוסף') || q.includes('תוספים') || q.includes('תרופ') || q.includes('ויטמין') || q.includes('supplement') || q.includes('pill') || q.includes('vitamin')) {
-      let response = `תוספי תזונה הם כלי יעיל להשלמת חוסרים, אך יש ליטול אותם בחוכמה על מנת למנוע התנגשויות ולוודא ספיגה מקסימלית:\n\n`;
-      response += `1. **ויטמין D3:** תוסף מומלץ מאוד (בייחוד אם יש חוסר בבדיקות). ויטמין D הוא מסיס בשומן, ולכן יש ליטול אותו **תמיד יחד עם ארוחה המכילה שומן בריא** (כמו אבוקדו, ביצים או שמן זית) כדי שיספג.\n`;
-      response += `2. **ברזל:** אם הומלץ לך על תוסף ברזל עקב אנמיה, מומלץ ליטול אותו על קיבה ריקה עם מים או מיץ תפוזים (ויטמין C). **אסור** ליטול אותו יחד עם קפה, תה או מוצרי חלב שמנטרלים את ספיגתו לחלוטין.\n`;
-      response += `3. **מגנזיום:** מסייע להרפיית שרירים ושיפור השינה. מומלץ ליטול בלילה לפני השינה. מומלץ להפריד את נטילת המגנזיום מתוספי סידן ואבץ כיוון שהם מתחרים על אותם קולטנים בגוף.\n`;
-      response += `4. **אומגה 3 (שמן דגים):** נוגד דלקת ומסייע לפרופיל השומנים. מומלץ ליטול יחד עם ארוחת הצהריים או הערב.\n\n⚠️ **חשוב מאוד:** ההמלצות שלי הן כלליות ומבוססות על המדע. לפני התחלת שימוש בכל תוסף או תרופה חדשה, יש להתייעץ עם מנהל/ת המערכת הרפואית או רופא המשפחה שלך.`;
-      return response;
-    }
-
-    // Default response
-    return `שאלה נהדרת, ${name}! כמאמן הבריאות ה-AI שלך, אני ממליץ להתמקד בבניית הרגלים עקביים. שילוב של תזונה מבוססת סיבים תזונתיים וחלבון איכותי, שינה טובה של 7-8 שעות בלילה, ופעילות גופנית מתונה של כ-30 דקות ביום (כמו הליכה מהירה או אימון כוח) עושים פלאים למדדי הדם ולרמת האנרגיה.\n\nהאם תרצה/י שאציע לך תפריט יומי מותאם אישית? או שתרצה/י לשאול אותי על מדד ספציפי בבדיקת הדם שלך (כמו גלוקוז, כולסטרול או ברזל)?`;
   };
 
   return (

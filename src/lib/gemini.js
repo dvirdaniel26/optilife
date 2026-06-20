@@ -34,6 +34,7 @@ export const analyzeMedicalImage = async (base64Data, mimeType, previousResults 
         5. DO NOT repeat each marker's value — that is shown in the table. Focus on meaning, patterns, and clinical significance.
         6. Write warmly and professionally, as if addressing the patient directly.
         7. DO NOT start the summary with a greeting like "שלום" or "שלום רב". Start directly with the medical analysis.
+        8. CRITICAL: DO NOT use double quotes (") anywhere inside the summary text. For Hebrew acronyms like ד"ל, use single quotes (ד'ל) or spell it out (דציליטר). Double quotes will break the JSON parser.
 
         ${previousResults ? `
         CRITICAL COMPARISON: Compare the new results with the following previous blood test results and specify if there is any improvement, worsening, or stable trends for key metrics (like glucose, cholesterol, etc.) in the Hebrew summary:

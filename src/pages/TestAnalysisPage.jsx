@@ -125,7 +125,7 @@ export default function TestAnalysisPage() {
         .from('medical_tests')
         .insert([{
           user_id: session.user.id,
-          test_name: 'ניתוח תמונה (AI)',
+          test_name: selectedFile ? selectedFile.name : 'ניתוח בדיקה (AI)',
           test_date: chosenDate,
           status: 'נותח',
         }])

@@ -80,7 +80,10 @@ export default async function handler(req, res) {
       return res.status(200).json(parsed);
     } catch (parseError) {
       console.error('Failed to parse Gemini output:', text);
-      return res.status(500).json({ error: 'AI returned invalid JSON structure.' });
+      return res.status(500).json({ 
+        error: 'AI returned invalid JSON structure.',
+        rawOutput: text
+      });
     }
   } catch (error) {
     console.error('Vercel Gemini Serverless function error:', error);

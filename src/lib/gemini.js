@@ -85,6 +85,9 @@ export const analyzeMedicalImage = async (base64Data, mimeType, previousResults 
 
     if (!response.ok) {
       const errorJson = await response.json().catch(() => ({}));
+      if (errorJson.rawOutput) {
+        console.error("RAW AI OUTPUT THAT FAILED TO PARSE:", errorJson.rawOutput);
+      }
       throw new Error(errorJson.error || `Server error: ${response.status}`);
     }
 

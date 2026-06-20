@@ -137,7 +137,7 @@ export default function AnalysisResultsPage() {
             .from('medical_tests')
             .select('*')
             .eq('id', passedTestId)
-            .single();
+            .maybeSingle();
           
           if (testError) throw testError;
           activeTest = specificTest;
@@ -149,9 +149,9 @@ export default function AnalysisResultsPage() {
             .eq('user_id', session.user.id)
             .order('created_at', { ascending: false })
             .limit(1)
-            .single();
+            .maybeSingle();
 
-          if (testError && testError.code !== 'PGRST116') { // PGRST116 is "No rows found"
+          if (testError) {
             throw testError;
           }
           activeTest = latestTest;
@@ -175,9 +175,9 @@ export default function AnalysisResultsPage() {
             .select('*')
             .eq('test_id', activeTest.id)
             .limit(1)
-            .single();
+            .maybeSingle();
             
-          if (insightsError && insightsError.code !== 'PGRST116') throw insightsError;
+          if (insightsError) throw insightsError;
           if (insights) setInsight(insights);
 
           // 4. Check if an action plan already exists for this specific test

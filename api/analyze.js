@@ -38,6 +38,7 @@ export default async function handler(req, res) {
       4. Bold key medical terms and values using double asterisks (e.g., **ויטמין D**, **ALT**).
       5. DO NOT repeat each marker's value — that is shown in the table. Focus on meaning, patterns, and clinical significance.
       6. Write warmly and professionally, as if addressing the patient directly.
+      7. DO NOT start the summary with a greeting like "שלום" or "שלום רב". Start directly with the medical analysis.
 
       ${previousResults ? `
       CRITICAL COMPARISON: Compare the new results with the following previous blood test results and specify if there is any improvement, worsening, or stable trends for key metrics (like glucose, cholesterol, etc.) in the Hebrew summary:

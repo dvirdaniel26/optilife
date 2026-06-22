@@ -117,7 +117,17 @@ export default function ActionPlanPage() {
           })
         );
 
-        const validPlans = plansWithMeta.filter(p => p.plan !== null);
+        const validPlans = plansWithMeta
+          .filter(p => p.plan !== null)
+          .sort((a, b) => {
+             const dateA = new Date(a.testDate).getTime();
+             const dateB = new Date(b.testDate).getTime();
+             if (dateA !== dateB) {
+                return dateB - dateA; // Sort by test date descending
+             }
+             return b.insightId - a.insightId; // Fallback to insightId descending
+          });
+        
         setAllPlans(validPlans);
 
         // Default: show the requested plan, or the most recent plan

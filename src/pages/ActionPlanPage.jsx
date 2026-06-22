@@ -338,7 +338,7 @@ export default function ActionPlanPage() {
   }
 
   // ── No plan yet — generation CTA ────────────────────────────────────────
-  if (allPlans.length === 0) {
+  if (allPlans.length === 0 || (requestedTestId && !allPlans.some(p => p.testId === requestedTestId))) {
     const abnormalCount = labResults.filter(r => r.is_abnormal).length;
     return (
       <main className="md:pr-72 pt-24 min-h-screen bg-background" dir="rtl">

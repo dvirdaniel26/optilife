@@ -74,7 +74,18 @@ export default async function handler(req, res) {
     const response = await result.response;
     const responseText = response.text();
 
-    return res.status(200).json({ reply: responseText });
+    let generatedTitle = null;
+    if (!history || history.length === 0) {
+       try {
+         const titleChat = model.startChat();
+         const titleResult = await titleChat.sendMessage(`Generate a very short title (max 3-5 words) in Hebrew summarizing this user query: "${query}". Respond ONLY with the title, no quotes or prefixes. Make it sound like a conversation topic.`);
+         generatedTitle = (await titleResult.response).text().trim().replace(/['"]/g, '');
+       } catch(e) {
+         console.error('Failed to generate title', e);
+       }
+    }
+
+    return res.status(200).json({ reply: responseText, title: generatedTitle });
   } catch (error) {
     console.error('Vercel Gemini Coach Chat Serverless function error:', error);
     return res.status(500).json({ error: error.message || 'Internal Server Error' });

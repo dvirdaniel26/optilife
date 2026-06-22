@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { 
   Send, Sparkles, Lock, Brain, ShieldAlert, ChevronLeft, 
-  Activity, Apple, TrendingUp, Pill, Loader2, User, MessageSquare, Plus, Menu, X
+  Apple, TrendingUp, Pill, Loader2, User, MessageSquare, Plus, Menu, X, Trash2
 } from 'lucide-react';
 
 export default function AiCoachPage() {
@@ -46,7 +46,80 @@ export default function AiCoachPage() {
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const messagesEndRef = useRef(null);
+  const chatContainerRef = useRef(null);
+
+  const generateWelcomeText = (latestTest, abnormalList) => {
+    const name = profile?.first_name || 'אורח/ת';
+    let welcomeText = `שלום ${name}! אני מאמן הבריאות ה-AI האישי שלך. 🤖\n\n`;
+
+    if (!latestTest) {
+      welcomeText += `נכון לעכשיו, לא מצאתי בדיקות דם במערכת. בינתיים, אשמח לענות על שאלות כלליות בנושאי בריאות. במה נתחיל?`;
+    } else {
+      welcomeText += `קראתי ולמדתי את כל בדיקות הדם שלך, כולל הבדיקה האחרונה מ-${latestTest.test_date}.\n\n`;
+
+      if (abnormalList.length > 0) {
+        welcomeText += `זיהיתי לאורך הזמן חריגות במדדים כמו: ${[...new Set(abnormalList.map(m => m.marker_name))].join(', ')}.\n\n`;
+        welcomeText += `אני כאן כדי לעזור לך לאזן אותם עם תזונה, תוספים וכושר. במה תרצה/י להתמקד היום?`;
+      } else {
+        welcomeText += `כל המדדים שלך נראים מצוין! במה נרצה להתמקד היום כדי לשמור על האנרגיה והבריאות?`;
+      }
+    }
+    return welcomeText;
+  };
+
+  const loadChatsAndCurrent = async (latestTest, abnormalList, specificChatId = null) => {
+    try {
+      // Fetch all chats
+      const { data: allChats } = await supabase
+        .from('coach_chats')
+        .select('*')
+        .eq('user_id', session?.user?.id)
+        .order('created_at', { ascending: false });
+        
+      setChatsList(allChats || []);
+
+      let currentChatId = specificChatId;
+      
+      if (!currentChatId && allChats && allChats.length > 0) {
+        currentChatId = allChats[0].id; // load latest by default
+      }
+      
+      setChatId(currentChatId);
+
+      if (currentChatId) {
+        // Load messages for this chat
+        const { data: msgs } = await supabase
+          .from('coach_messages')
+          .select('*')
+          .eq('chat_id', currentChatId)
+          .order('created_at', { ascending: true });
+        
+        if (msgs && msgs.length > 0) {
+          setMessages(msgs.map(m => ({
+            id: m.id,
+            sender: m.sender === 'user' ? 'user' : 'ai',
+            text: m.text,
+            time: new Date(m.created_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+          })));
+        } else {
+          setMessages([]);
+        }
+      } else {
+        // No chats exist at all
+        const welcomeText = generateWelcomeText(latestTest, abnormalList);
+        setMessages([{
+           id: 'welcome',
+           sender: 'ai',
+           text: welcomeText,
+           time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+        }]);
+      }
+      
+      setShowMobileHistory(false); // Close mobile menu if it was open
+    } catch (e) {
+      console.error("Error loading chat history:", e);
+    }
+  };
 
   // Load all tests and results
   useEffect(() => {
@@ -98,85 +171,17 @@ export default function AiCoachPage() {
     };
 
     fetchAllData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id, isSubscriber]);
 
-  // Scroll to bottom on new messages
+  // Scroll to bottom on new messages inside the container
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
   }, [messages, isTyping]);
 
-  const generateWelcomeText = (latestTest, abnormalList) => {
-    const name = profile?.first_name || 'אורח/ת';
-    let welcomeText = `שלום ${name}! אני מאמן הבריאות ה-AI האישי שלך. 🤖\n\n`;
 
-    if (!latestTest) {
-      welcomeText += `נכון לעכשיו, לא מצאתי בדיקות דם במערכת. בינתיים, אשמח לענות על שאלות כלליות בנושאי בריאות. במה נתחיל?`;
-    } else {
-      welcomeText += `קראתי ולמדתי את כל בדיקות הדם שלך, כולל הבדיקה האחרונה מ-${latestTest.test_date}.\n\n`;
-
-      if (abnormalList.length > 0) {
-        welcomeText += `זיהיתי לאורך הזמן חריגות במדדים כמו: ${[...new Set(abnormalList.map(m => m.marker_name))].join(', ')}.\n\n`;
-        welcomeText += `אני כאן כדי לעזור לך לאזן אותם עם תזונה, תוספים וכושר. במה תרצה/י להתמקד היום?`;
-      } else {
-        welcomeText += `כל המדדים שלך נראים מצוין! במה נרצה להתמקד היום כדי לשמור על האנרגיה והבריאות?`;
-      }
-    }
-    return welcomeText;
-  };
-
-  const loadChatsAndCurrent = async (latestTest, abnormalList, specificChatId = null) => {
-    try {
-      // Fetch all chats
-      const { data: allChats } = await supabase
-        .from('coach_chats')
-        .select('*')
-        .eq('user_id', session.user.id)
-        .order('created_at', { ascending: false });
-        
-      setChatsList(allChats || []);
-
-      let currentChatId = specificChatId;
-      
-      if (!currentChatId && allChats && allChats.length > 0) {
-        currentChatId = allChats[0].id; // load latest by default
-      }
-      
-      setChatId(currentChatId);
-
-      if (currentChatId) {
-        // Load messages for this chat
-        const { data: msgs } = await supabase
-          .from('coach_messages')
-          .select('*')
-          .eq('chat_id', currentChatId)
-          .order('created_at', { ascending: true });
-        
-        if (msgs && msgs.length > 0) {
-          setMessages(msgs.map(m => ({
-            id: m.id,
-            sender: m.sender === 'user' ? 'user' : 'ai',
-            text: m.text,
-            time: new Date(m.created_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
-          })));
-        } else {
-          setMessages([]);
-        }
-      } else {
-        // No chats exist at all
-        const welcomeText = generateWelcomeText(latestTest, abnormalList);
-        setMessages([{
-           id: 'welcome',
-           sender: 'ai',
-           text: welcomeText,
-           time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
-        }]);
-      }
-      
-      setShowMobileHistory(false); // Close mobile menu if it was open
-    } catch (e) {
-      console.error("Error loading chat history:", e);
-    }
-  };
 
   const startNewChat = () => {
     setChatId(null);
@@ -188,6 +193,22 @@ export default function AiCoachPage() {
        time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
     }]);
     setShowMobileHistory(false);
+  };
+
+  const handleDeleteChat = async (e, idToDelete) => {
+    e.stopPropagation();
+    if (!window.confirm('האם אתה בטוח שברצונך למחוק שיחה זו?')) return;
+    
+    try {
+      await supabase.from('coach_chats').delete().eq('id', idToDelete);
+      setChatsList(prev => prev.filter(c => c.id !== idToDelete));
+      
+      if (chatId === idToDelete) {
+         startNewChat();
+      }
+    } catch (err) {
+      console.error('Error deleting chat:', err);
+    }
   };
 
   const handleSendMessage = async (e) => {
@@ -211,7 +232,7 @@ export default function AiCoachPage() {
       
       // If this is a new chat, create the thread first
       if (!activeChatId) {
-        const title = userText.substring(0, 30) + (userText.length > 30 ? '...' : '');
+        const title = "שיחה חדשה..."; // temporary title, to be updated by AI
         const { data: newChat } = await supabase
           .from('coach_chats')
           .insert([{ user_id: session.user.id, title }])
@@ -256,24 +277,30 @@ export default function AiCoachPage() {
       });
 
       const data = await response.json();
-      const aiReply = data.reply || 'מצטער, נתקלתי בבעיה קטנה בעיבוד התשובה. תוכל לנסח שוב?';
+      if (data.reply) {
+        const aiMsgLocal = {
+          id: 'msg_local_' + Date.now(),
+          sender: 'ai',
+          text: data.reply,
+          time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+        };
+        setMessages(prev => [...prev, aiMsgLocal]);
 
-      if (activeChatId) {
-        await supabase.from('coach_messages').insert([{
-           chat_id: activeChatId,
-           user_id: session.user.id,
-           sender: 'ai',
-           text: aiReply
-        }]);
+        if (activeChatId) {
+          await supabase.from('coach_messages').insert([{
+             chat_id: activeChatId,
+             user_id: session.user.id,
+             sender: 'ai',
+             text: data.reply
+          }]);
+          
+          // Update chat title if AI generated one
+          if (data.title) {
+             await supabase.from('coach_chats').update({ title: data.title }).eq('id', activeChatId);
+             setChatsList(prev => prev.map(c => c.id === activeChatId ? { ...c, title: data.title } : c));
+          }
+        }
       }
-
-      const aiMsgLocal = {
-        id: 'msg_ai_' + Date.now(),
-        sender: 'ai',
-        text: aiReply,
-        time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
-      };
-      setMessages(prev => [...prev, aiMsgLocal]);
 
     } catch (error) {
        console.error("Chat error:", error);
@@ -447,8 +474,11 @@ export default function AiCoachPage() {
             {/* RIGHT COLUMN: Interactive Chat Area */}
             <div className={`lg:col-span-8 bg-white border border-outline/10 rounded-3xl p-4 md:p-6 lg:p-8 flex flex-col gap-4 custom-shadow h-[600px] md:h-[700px] relative ${showMobileHistory ? 'hidden lg:flex' : 'flex'}`}>
               
-              {/* Messages History */}
-              <div className="flex-1 overflow-y-auto pr-2 flex flex-col gap-6 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
+              {/* Chat Container */}
+              <div 
+                ref={chatContainerRef}
+                className="flex-1 overflow-y-auto pr-2 flex flex-col gap-6 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent"
+              >
                 {dbLoading ? (
                   <div className="h-full flex flex-col items-center justify-center text-center text-slate-400 text-xs gap-sm">
                     <Loader2 className="w-8 h-8 animate-spin text-secondary" />
@@ -503,7 +533,6 @@ export default function AiCoachPage() {
                     </div>
                   </div>
                 )}
-                <div ref={messagesEndRef} />
               </div>
 
               {/* Quick Prompts Panel */}
@@ -580,16 +609,25 @@ export default function AiCoachPage() {
                     <p className="text-xs text-slate-400 text-center py-4">אין שיחות קודמות</p>
                   ) : (
                     chatsList.map(c => (
-                      <button
+                      <div
                         key={c.id}
                         onClick={() => loadChatsAndCurrent(latestTestInfo, abnormalMarkers, c.id)}
-                        className={`text-right p-3 rounded-xl text-xs transition-colors border-0 cursor-pointer ${chatId === c.id ? 'bg-secondary/10 border-r-2 border-secondary text-secondary font-bold' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}
+                        className={`group flex items-center justify-between text-right p-3 rounded-xl text-xs transition-colors cursor-pointer ${chatId === c.id ? 'bg-secondary/10 border-r-2 border-secondary text-secondary font-bold' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}
                       >
-                        <div className="truncate mb-1">{c.title || 'שיחה ללא כותרת'}</div>
-                        <div className="text-[10px] text-slate-400 font-normal">
-                          {new Date(c.created_at).toLocaleDateString('he-IL')}
+                        <div className="min-w-0 flex-1 pl-2">
+                          <div className="truncate mb-1">{c.title || 'שיחה ללא כותרת'}</div>
+                          <div className="text-[10px] text-slate-400 font-normal">
+                            {new Date(c.created_at).toLocaleDateString('he-IL')}
+                          </div>
                         </div>
-                      </button>
+                        <button 
+                          onClick={(e) => handleDeleteChat(e, c.id)}
+                          className="text-slate-300 hover:text-status-error opacity-0 group-hover:opacity-100 transition-all cursor-pointer bg-transparent border-0 p-1 shrink-0"
+                          title="מחק שיחה"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     ))
                   )}
                 </div>

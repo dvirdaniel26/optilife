@@ -85,6 +85,7 @@ export default async function handler(req, res) {
     const responseText = response.text();
 
     let generatedTitle = null;
+    let titleError = null;
     if (formattedHistory.length === 0) {
        try {
          const titleChat = model.startChat();
@@ -92,10 +93,11 @@ export default async function handler(req, res) {
          generatedTitle = (await titleResult.response).text().trim().replace(/['"]/g, '');
        } catch(e) {
          console.error('Failed to generate title', e);
+         titleError = e.message;
        }
     }
 
-    return res.status(200).json({ reply: responseText, title: generatedTitle });
+    return res.status(200).json({ reply: responseText, title: generatedTitle, titleError: titleError, formattedHistoryLength: formattedHistory.length });
   } catch (error) {
     console.error('Vercel Gemini Coach Chat Serverless function error:', error);
     return res.status(500).json({ error: error.message || 'Internal Server Error' });

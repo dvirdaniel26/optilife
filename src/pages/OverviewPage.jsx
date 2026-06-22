@@ -85,7 +85,7 @@ export default function OverviewPage() {
           .from('medical_tests')
           .select('*')
           .eq('user_id', session.user.id)
-          .order('created_at', { ascending: false });
+          .order('test_date', { ascending: false });
           
         if (testsError) throw testsError;
         setRecentTests(tests || []);
@@ -138,11 +138,12 @@ export default function OverviewPage() {
             });
           }
 
-          // 2. Fetch latest AI action plan from table
+          // 2. Fetch latest AI action plan from table for this specific test
           const { data: insights, error: insightsErr } = await supabase
             .from('ai_insights')
             .select('*')
             .eq('user_id', session.user.id)
+            .eq('test_id', latestTest.id)
             .like('summary_text', 'ACTION_PLAN:%')
             .order('id', { ascending: false })
             .limit(1);
@@ -591,7 +592,7 @@ export default function OverviewPage() {
                     <h3 className="font-heading text-xl font-bold text-primary">מיקוד תוכנית הפעולה להיום</h3>
                   </div>
                   <button 
-                    onClick={() => navigate('/plan')} 
+                    onClick={() => navigate('/plan?testId=' + recentTests[0]?.id)} 
                     className="text-secondary text-xs font-bold hover:underline flex items-center gap-1 cursor-pointer border-0 bg-transparent"
                   >
                     <span>לתוכנית המלאה</span>
@@ -675,7 +676,7 @@ export default function OverviewPage() {
                     </p>
                   </div>
                   <button
-                    onClick={() => navigate('/plan')}
+                    onClick={() => navigate('/plan?testId=' + recentTests[0]?.id)}
                     className="bg-secondary hover:bg-secondary/95 text-white font-bold px-8 py-3 rounded-full shadow-lg hover:shadow-secondary/20 transition-all hover:scale-105 active:scale-95 text-sm cursor-pointer border-0 inline-flex items-center gap-2"
                   >
                     <Sparkles className="w-4 h-4 text-accent-action fill-accent-action" />

@@ -276,6 +276,10 @@ export default function AiCoachPage() {
         })
       });
 
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`);
+      }
+
       const data = await response.json();
       if (data.reply) {
         const aiMsgLocal = {

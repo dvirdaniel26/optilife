@@ -121,7 +121,19 @@ export default async function handler(req, res) {
       }
     `;
 
-    const result = await model.generateContent([prompt]);
+    let result;
+    try {
+      result = await model.generateContent([prompt]);
+    } catch (error) {
+      if (error.status === 503 || error.message.includes('503')) {
+        console.log('Gemini 503 error, retrying after 1.5 seconds...');
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        result = await model.generateContent([prompt]);
+      } else {
+        throw error;
+      }
+    }
+    
     const response = await result.response;
     const text = response.text();
     

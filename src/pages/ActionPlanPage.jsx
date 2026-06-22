@@ -22,6 +22,7 @@ export default function ActionPlanPage() {
   const [allPlans, setAllPlans] = useState([]);             // ALL action plans ever created
   const [selectedPlan, setSelectedPlan] = useState(null);   // currently viewed plan
   const [selectedPlanMeta, setSelectedPlanMeta] = useState(null); // {test_name, test_date} for selected plan
+  const [viewMode, setViewMode] = useState('detail');       // 'list' or 'detail'
   const [planSelectorOpen, setPlanSelectorOpen] = useState(false);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('nutrition');
@@ -121,6 +122,12 @@ export default function ActionPlanPage() {
 
         // Default: show the requested plan, or the most recent plan
         if (validPlans.length > 0) {
+          if (!requestedTestId && validPlans.length > 1) {
+            setViewMode('list');
+          } else {
+            setViewMode('detail');
+          }
+          
           let planToSelect = validPlans[0];
           if (requestedTestId) {
              const requestedPlan = validPlans.find(p => p.testId === requestedTestId);
@@ -408,6 +415,51 @@ export default function ActionPlanPage() {
   // ── Plan exists — display it ─────────────────────────────────────────────
   const latestTestHasPlan = allPlans.some(p => p.testId === latestTest?.id);
 
+  if (viewMode === 'list') {
+    return (
+      <main className="md:pr-72 pt-24 min-h-screen bg-background transition-all" dir="rtl">
+        <div className="p-4 sm:p-6 md:p-8 max-w-5xl mx-auto space-y-6">
+          <div className="mb-6">
+            <h1 className="font-heading text-3xl font-black text-primary">תוכניות הבריאות שלי</h1>
+            <p className="text-on-surface-variant text-sm mt-1 font-semibold">בחרי את התוכנית שברצונך להציג</p>
+          </div>
+          
+          <div className="bg-white rounded-3xl custom-shadow border border-slate-100 overflow-hidden">
+            <div className="divide-y divide-slate-50">
+              {allPlans.map((p, idx) => (
+                <div 
+                  key={p.insightId}
+                  onClick={() => {
+                    setSelectedPlan(p.plan);
+                    setSelectedPlanMeta({ testName: p.testName, testDate: p.testDate });
+                    setViewMode('detail');
+                  }}
+                  className={`flex items-center justify-between px-6 py-5 transition-all duration-200 cursor-pointer group ${idx === 0 ? 'bg-secondary/5 hover:bg-secondary/10' : 'hover:bg-slate-50'}`}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${idx === 0 ? 'bg-secondary/20 text-secondary' : 'bg-primary/5 text-primary'}`}>
+                      <span className="material-symbols-outlined text-2xl">{idx === 0 ? 'star' : 'assignment'}</span>
+                    </div>
+                    <div>
+                      <h3 className={`font-bold text-lg mb-0.5 ${idx === 0 ? 'text-secondary' : 'text-primary group-hover:text-secondary'}`}>
+                        {p.testName} {idx === 0 && <span className="text-xs bg-secondary text-white px-2 py-0.5 rounded-full mr-2 align-middle font-normal">העדכנית ביותר</span>}
+                      </h3>
+                      <p className="text-sm text-on-surface-variant flex items-center gap-1.5 font-medium">
+                        <span className="material-symbols-outlined text-sm">calendar_today</span>
+                        {new Date(p.testDate).toLocaleDateString('he-IL')}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="material-symbols-outlined text-slate-300 group-hover:text-secondary transition-colors" dir="ltr">chevron_left</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="md:pr-72 pt-24 min-h-screen bg-background print:pr-0 print:pt-4" dir="rtl">
       <div className="p-4 sm:p-6 md:p-8 max-w-5xl mx-auto print:max-w-full print:p-0 space-y-5">
@@ -415,8 +467,19 @@ export default function ActionPlanPage() {
         {/* ── Page Header ── */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 print:hidden">
           <div>
-            <h1 className="font-heading text-3xl font-black text-primary">תוכנית הבריאות</h1>
-            <p className="text-on-surface-variant text-sm mt-0.5 font-semibold">
+            <div className="flex items-center gap-3">
+              {allPlans.length > 1 && (
+                <button 
+                  onClick={() => setViewMode('list')}
+                  className="w-10 h-10 rounded-full flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors border-0 cursor-pointer shrink-0"
+                  title="חזור לרשימת התוכניות"
+                >
+                  <span className="material-symbols-outlined text-xl">arrow_forward</span>
+                </button>
+              )}
+              <h1 className="font-heading text-3xl font-black text-primary">תוכנית הבריאות</h1>
+            </div>
+            <p className="text-on-surface-variant text-sm mt-0.5 font-semibold pr-13">
               {selectedPlanMeta
                 ? `${selectedPlanMeta.testName} — ${new Date(selectedPlanMeta.testDate).toLocaleDateString('he-IL')}`
                 : 'תוכנית מותאמת אישית לפי בדיקות הדם'}

@@ -45,24 +45,34 @@ export default async function handler(req, res) {
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ 
-      model: 'gemini-2.5-flash',
+      model: 'gemini-1.5-flash',
       systemInstruction: systemInstruction
     });
 
     // Format chat history for Gemini API. 
     // Gemini chat API expects format: { role: 'user' | 'model', parts: [{ text: '...' }] }
+    // It must start with 'user' and alternate roles.
     const formattedHistory = [];
     if (history && Array.isArray(history)) {
       history.forEach(msg => {
         const role = msg.sender === 'user' ? 'user' : 'model';
-        // Exclude the initial welcome message from the strict history array to avoid cluttering, 
-        // since we pass system instructions about abnormal markers separately anyway.
-        if (msg.id !== 'welcome') {
-          formattedHistory.push({
-            role: role,
-            parts: [{ text: msg.text }]
-          });
+        
+        // Exclude local welcome message explicitly
+        if (msg.id === 'welcome') return;
+
+        // Ensure history starts with a user message
+        if (formattedHistory.length === 0 && role !== 'user') return;
+
+        // If consecutive messages have the same role, merge them
+        if (formattedHistory.length > 0 && formattedHistory[formattedHistory.length - 1].role === role) {
+          formattedHistory[formattedHistory.length - 1].parts[0].text += '\n\n' + msg.text;
+          return;
         }
+
+        formattedHistory.push({
+          role: role,
+          parts: [{ text: msg.text }]
+        });
       });
     }
 
@@ -75,7 +85,7 @@ export default async function handler(req, res) {
     const responseText = response.text();
 
     let generatedTitle = null;
-    if (!history || history.length === 0) {
+    if (formattedHistory.length === 0) {
        try {
          const titleChat = model.startChat();
          const titleResult = await titleChat.sendMessage(`Generate a very short title (max 3-5 words) in Hebrew summarizing this user query: "${query}". Respond ONLY with the title, no quotes or prefixes. Make it sound like a conversation topic.`);

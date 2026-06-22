@@ -422,7 +422,7 @@ export default function AnalysisResultsPage() {
 
         <div className="flex flex-col sm:flex-row gap-4 pt-4">
           <button 
-            onClick={() => navigate('/plan')}
+            onClick={() => navigate(`/plan?testId=${testData.id}`)}
             className="w-full sm:w-auto bg-accent-action hover:shadow-lg transition-all rounded-full py-3.5 px-8 flex items-center justify-center gap-2 text-primary font-bold active:scale-95 text-base min-w-[280px] border-0 cursor-pointer"
           >
             <span className="material-symbols-outlined text-lg">{hasPlan ? 'favorite' : 'bolt'}</span>

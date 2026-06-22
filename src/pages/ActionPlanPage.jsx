@@ -4,13 +4,15 @@ import { NotificationsContext } from '../context/NotificationsContext';
 import { supabase } from '../lib/supabase';
 import { generateActionPlan } from '../lib/gemini';
 import { Loader2, AlertCircle, Sparkles, Check, Flame, Salad, Printer, Dumbbell, Calendar, ShieldAlert, ChevronLeft, ChevronDown } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 export default function ActionPlanPage() {
   const { profile, session, isPremium } = useContext(UserContext);
   const { addNotification } = useContext(NotificationsContext);
   const firstName = profile?.first_name || 'אורח/ת';
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const requestedTestId = searchParams.get('testId');
   const isFemale = profile?.gender === 'female';
 
   const [loading, setLoading] = useState(true);
@@ -53,13 +55,19 @@ export default function ActionPlanPage() {
       setLoading(true);
       setError(null);
 
-      // 1. Fetch latest analyzed test (for generating a new plan)
-      const { data: test } = await supabase
+      // 1. Fetch analyzed test (either requested test or the newest test if none requested)
+      let testQuery = supabase
         .from('medical_tests')
         .select('*')
-        .eq('user_id', session.user.id)
-        .order('test_date', { ascending: false })
-        .limit(1);
+        .eq('user_id', session.user.id);
+
+      if (requestedTestId) {
+        testQuery = testQuery.eq('id', requestedTestId);
+      } else {
+        testQuery = testQuery.order('test_date', { ascending: false }).limit(1);
+      }
+
+      const { data: test } = await testQuery;
 
       if (test && test.length > 0) {
         const activeTest = test[0];
@@ -111,10 +119,15 @@ export default function ActionPlanPage() {
         const validPlans = plansWithMeta.filter(p => p.plan !== null);
         setAllPlans(validPlans);
 
-        // Default: show the most recent plan
+        // Default: show the requested plan, or the most recent plan
         if (validPlans.length > 0) {
-          setSelectedPlan(validPlans[0].plan);
-          setSelectedPlanMeta({ testName: validPlans[0].testName, testDate: validPlans[0].testDate });
+          let planToSelect = validPlans[0];
+          if (requestedTestId) {
+             const requestedPlan = validPlans.find(p => p.testId === requestedTestId);
+             if (requestedPlan) planToSelect = requestedPlan;
+          }
+          setSelectedPlan(planToSelect.plan);
+          setSelectedPlanMeta({ testName: planToSelect.testName, testDate: planToSelect.testDate });
         }
       } else {
         setTotalPlans(0);
@@ -129,7 +142,7 @@ export default function ActionPlanPage() {
 
   useEffect(() => {
     fetchData();
-  }, [session]);
+  }, [session, requestedTestId]);
 
   const handleCreatePlan = async () => {
     if (!isAllowedToGenerate) { navigate('/pricing'); return; }

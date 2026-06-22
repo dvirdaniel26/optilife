@@ -192,7 +192,8 @@ export default function ActionPlanPage() {
         <div className="p-6 w-full max-w-md mx-auto text-center pt-20">
           <div className="bg-white rounded-3xl p-10 custom-shadow border border-slate-100 flex flex-col items-center">
             <div className="relative mb-6">
-              <div className="w-24 h-24 rounded-full border-4 border-slate-100 border-t-secondary animate-spin" />
+              <div className="absolute inset-0 rounded-full border-4 border-slate-100" />
+              <div className="w-24 h-24 rounded-full border-4 border-transparent border-t-secondary animate-spin" />
               <div className="absolute inset-0 flex items-center justify-center">
                 <Sparkles className="w-8 h-8 text-secondary animate-pulse" />
               </div>

@@ -93,11 +93,29 @@ export default function AllTestsPage() {
         alert('מזהה בדיקה חסר.');
         return;
       }
-      const { error } = await supabase.from('medical_tests').delete().eq('id', testId);
-      if (error) {
-        alert('שגיאה ממסד הנתונים: ' + error.message);
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      
+      if (!token) {
+        alert('שגיאת התחברות: אנא התחבר מחדש.');
         return;
       }
+
+      const response = await fetch('/api/delete-test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ testId })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'שגיאה במחיקת הבדיקה');
+      }
+
       setFailedTestToView(null);
       await fetchTests();
     } catch (e) {

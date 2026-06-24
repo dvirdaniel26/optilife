@@ -26,6 +26,7 @@ export default function TestAnalysisPage() {
 
   // AI Pending Result state when date is NOT detected
   const [pendingResult, setPendingResult] = useState(null);
+  const [pendingTestId, setPendingTestId] = useState(null);
 
 
 
@@ -116,23 +117,42 @@ export default function TestAnalysisPage() {
     });
   };
 
-  const saveAnalysisResults = async (aiResult, chosenDate) => {
+  const saveAnalysisResults = async (aiResult, chosenDate, pendingTestId = null) => {
     setIsAnalyzing(true);
     setError(null);
     try {
-      // 1. Create a Medical Test record
-      const { data: testData, error: testError } = await supabase
-        .from('medical_tests')
-        .insert([{
-          user_id: session.user.id,
-          test_name: selectedFile ? selectedFile.name : 'ניתוח בדיקה (AI)',
-          test_date: chosenDate,
-          status: 'נותח',
-        }])
-        .select()
-        .single();
+      let testData;
 
-      if (testError) throw testError;
+      if (pendingTestId) {
+        // Update the existing pending record
+        const { data, error: testError } = await supabase
+          .from('medical_tests')
+          .update({
+            test_date: chosenDate,
+            status: 'completed',
+          })
+          .eq('id', pendingTestId)
+          .select()
+          .single();
+
+        if (testError) throw testError;
+        testData = data;
+      } else {
+        // Fallback: Create a Medical Test record if not pre-created
+        const { data, error: testError } = await supabase
+          .from('medical_tests')
+          .insert([{
+            user_id: session.user.id,
+            test_name: selectedFile ? selectedFile.name : 'ניתוח בדיקה (AI)',
+            test_date: chosenDate,
+            status: 'completed',
+          }])
+          .select()
+          .single();
+
+        if (testError) throw testError;
+        testData = data;
+      }
 
       // 2. Insert Lab Results
       const labResultsData = aiResult.results.map(r => ({
@@ -208,11 +228,38 @@ export default function TestAnalysisPage() {
     setError(null);
     setPendingResult(null);
 
+    // 1. Create a pending record immediately
+    let newPendingTestId = null;
     try {
-      // 1. Convert file to Base64
+      const { data, error } = await supabase
+        .from('medical_tests')
+        .insert([{
+          user_id: session.user.id,
+          test_name: selectedFile ? selectedFile.name : 'בדיקת מעבדה מחשבת...',
+          test_date: testDate,
+          status: 'processing'
+        }])
+        .select()
+        .single();
+      
+      if (!error && data) {
+        newPendingTestId = data.id;
+        setPendingTestId(data.id);
+      }
+    } catch (e) {
+      console.warn('Failed to create pending test', e);
+    }
+
+    // 2. Start a 5-second timer to navigate the user to the All Tests page if analysis takes too long
+    const timeoutId = setTimeout(() => {
+      navigate('/tests');
+    }, 5000);
+
+    try {
+      // 3. Convert file to Base64
       const base64Data = await convertToBase64(selectedFile);
 
-      // 2. Fetch the user's previous test and its markers for comparison
+      // 4. Fetch the user's previous test and its markers for comparison
       let prevResultsText = '';
       try {
         const { data: prevTests, error: prevTestsError } = await supabase
@@ -241,37 +288,54 @@ export default function TestAnalysisPage() {
         console.error('שגיאה בשליפת בדיקות קודמות לצורך השוואה:', dbErr);
       }
 
-      // 3. Call Gemini AI (passing the comparison context)
+      // 5. Call Gemini AI (passing the comparison context)
       const aiResult = await analyzeMedicalImage(base64Data, selectedFile.type, prevResultsText);
 
       if (!aiResult.results || aiResult.results.length === 0) {
         throw new Error(isFemale ? 'לא זוהו מדדים בתמונה. ודאי שזוהי תמונה ברורה של תוצאות מעבדה.' : 'לא זוהו מדדים בתמונה. ודא שזוהי תמונה ברורה של תוצאות מעבדה.');
       }
 
-      // 4. Check if the AI successfully detected a date
+      // 6. Check if the AI successfully detected a date
       // A valid date should match YYYY-MM-DD
       const detectedDate = aiResult.test_date;
       const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
       
-      if (detectedDate && dateRegex.test(detectedDate)) {
-        // AI successfully detected the date! Automatically save and redirect
-        await saveAnalysisResults(aiResult, detectedDate);
-      } else {
-        // AI failed to detect the date. Stop and ask the user to specify it!
-        setPendingResult(aiResult);
-        setIsAnalyzing(false); // Stop loading so they can choose the date
-      }
+      const finalDate = (detectedDate && dateRegex.test(detectedDate)) ? detectedDate : testDate;
+
+      // Update the pending test with success
+      await saveAnalysisResults(aiResult, finalDate, newPendingTestId);
+
+      clearTimeout(timeoutId); // If it finished under 5s, we clear it because saveAnalysisResults will navigate to /analysis
 
     } catch (err) {
       console.error(err);
-      setError(err.message || (isFemale ? 'אירעה שגיאה במהלך הניתוח. נסי שוב.' : 'אירעה שגיאה במהלך הניתוח. נסה שוב.'));
+      clearTimeout(timeoutId);
+
+      const errMsg = err.message || (isFemale ? 'אירעה שגיאה במהלך הניתוח. נסי שוב.' : 'אירעה שגיאה במהלך הניתוח. נסה שוב.');
+      
+      if (newPendingTestId) {
+        await supabase
+          .from('medical_tests')
+          .update({ status: 'failed' })
+          .eq('id', newPendingTestId);
+      }
+
+      setError(errMsg);
       setIsAnalyzing(false);
+
+      // Show notification so user knows it failed, even if they were redirected to /tests
+      addNotification({
+        type: 'error',
+        title: 'הניתוח נכשל ❌',
+        message: 'הניתוח של בדיקת הדם נכשל. נסה שוב או עבור לעמוד כל הבדיקות לפרטים.',
+        link: '/tests'
+      });
     }
   };
 
   const handleSavePendingWithCustomDate = async () => {
     if (!pendingResult) return;
-    await saveAnalysisResults(pendingResult, testDate);
+    await saveAnalysisResults(pendingResult, testDate, pendingTestId);
   };
 
   // Determine subscription tier status
@@ -545,7 +609,7 @@ export default function TestAnalysisPage() {
                           {isAnalyzing ? (
                             <>
                               <Loader2 className="w-5 h-5 animate-spin" />
-                              <span>מנתח כעת (ממתינים ל-AI)...</span>
+                              <span>מתבצע חיווי.. נא לא לסגור חלון זה</span>
                             </>
                           ) : (
                             <>

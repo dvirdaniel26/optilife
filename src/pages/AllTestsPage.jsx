@@ -44,20 +44,41 @@ export default function AllTestsPage() {
   const [loading, setLoading]     = useState(true);
   const [sortKey, setSortKey]     = useState('created_at');
   const [sortDir, setSortDir]     = useState('desc');
+  const [failedTestToView, setFailedTestToView] = useState(null);
+
+  const fetchTests = async () => {
+    if (!session?.user?.id) return;
+    const { data, error } = await supabase
+      .from('medical_tests')
+      .select('id, test_name, test_date, created_at, status')
+      .eq('user_id', session.user.id);
+
+    if (!error && data) setTests(data);
+    setLoading(false);
+  };
 
   useEffect(() => {
-    const fetchTests = async () => {
-      if (!session?.user?.id) return;
-      const { data, error } = await supabase
-        .from('medical_tests')
-        .select('id, test_name, test_date, created_at, status')
-        .eq('user_id', session.user.id);
-
-      if (!error && data) setTests(data);
-      setLoading(false);
-    };
     fetchTests();
   }, [session]);
+
+  // Set up periodic polling so the 'processing' status updates automatically if it finishes while we are on the page
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      fetchTests();
+    }, 5000); // Poll every 5 seconds
+
+    return () => clearInterval(intervalId);
+  }, [session]);
+
+  const handleDeleteFailedTest = async (testId) => {
+    try {
+      await supabase.from('medical_tests').delete().eq('id', testId);
+      setFailedTestToView(null);
+      await fetchTests();
+    } catch (e) {
+      console.error('Failed to delete test', e);
+    }
+  };
 
   const handleSort = useCallback((key) => {
     setSortKey(prev => {
@@ -168,8 +189,18 @@ export default function AllTestsPage() {
                 return (
                   <div
                     key={test.id}
-                    onClick={() => navigate('/analysis', { state: { testId: test.id } })}
-                    className="flex sm:grid sm:grid-cols-12 sm:gap-4 items-center px-5 sm:px-6 py-4 transition-all duration-200 text-right hover:bg-slate-50 cursor-pointer group"
+                    onClick={() => {
+                      if (test.status === 'failed') {
+                        setFailedTestToView(test);
+                      } else if (test.status === 'processing') {
+                        // Wait for it
+                      } else {
+                        navigate('/analysis', { state: { testId: test.id } });
+                      }
+                    }}
+                    className={`flex sm:grid sm:grid-cols-12 sm:gap-4 items-center px-5 sm:px-6 py-4 transition-all duration-200 text-right ${
+                      test.status === 'processing' ? 'opacity-70 cursor-wait' : 'hover:bg-slate-50 cursor-pointer group'
+                    }`}
                   >
                     {/* Name & icon */}
                     <div className="col-span-4 flex items-center gap-3 flex-1 min-w-0">
@@ -222,6 +253,38 @@ export default function AllTestsPage() {
           </div>
         )}
       </div>
+
+      {failedTestToView && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm" dir="rtl">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl relative animate-in zoom-in-95 duration-200">
+            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center text-red-600 mb-4">
+              <span className="material-symbols-outlined text-2xl">error</span>
+            </div>
+            <h3 className="text-xl font-bold text-primary mb-2">
+              הניתוח נכשל
+            </h3>
+            <p className="text-sm text-slate-600 mb-6 leading-relaxed">
+              לצערנו הניתוח של בדיקת הדם נכשל. זה קורה לרוב בגלל איכות תמונה ירודה, מסמך לא קריא או עומס רגעי בשרתים. 
+              <br/><br/>
+              אנא מחק/י את הבדיקה ונסה/י להעלות שוב תמונה ברורה וחדה יותר או קובץ PDF.
+            </p>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => handleDeleteFailedTest(failedTestToView.id)}
+                className="flex-1 bg-red-500 text-white py-2.5 rounded-xl font-bold hover:bg-red-600 transition-colors shadow-sm"
+              >
+                מחק בדיקה
+              </button>
+              <button 
+                onClick={() => setFailedTestToView(null)}
+                className="flex-1 bg-slate-100 text-slate-700 py-2.5 rounded-xl font-bold hover:bg-slate-200 transition-colors"
+              >
+                סגור
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

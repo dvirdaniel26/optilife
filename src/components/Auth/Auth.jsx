@@ -445,29 +445,7 @@ export default function Auth({ isRecovery, onRecoveryComplete }) {
               {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : 'אימות קוד והתחברות'}
             </button>
 
-            {/* Developer Bypass Link */}
-            <div className="text-center mt-6 pt-4 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => {
-                  localStorage.setItem('optilife_mfa_bypass', 'true');
-                  setMessage('עקיפת MFA לפיתוח הופעלה! מועבר...');
-                  setTimeout(() => {
-                    if (recoveryAfterMFA) {
-                      setIsMfaChallenge(false);
-                      setIsUpdatePasswordMode(true);
-                      setMfaCode('');
-                      setMessage('האימות הדו-שלבי נעקף בהצלחה (כלי פיתוח)! כעת תוכל לקבוע סיסמה חדשה.');
-                    } else {
-                      navigate('/dashboard');
-                    }
-                  }, 1200);
-                }}
-                className="text-xs text-secondary hover:text-primary font-bold transition-all hover:underline"
-              >
-                🔧 כלי פיתוח: עקוף אבטחה דו-שלבית (MFA Bypass)
-              </button>
-            </div>
+
           </form>
         ) : isUpdatePasswordMode ? (
           /* 🔐 SCREEN 2: Set New Password Form (Update Password) */

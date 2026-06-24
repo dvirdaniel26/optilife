@@ -309,6 +309,14 @@ export default function AiCoachPage() {
     } catch (error) {
        console.error("Chat error:", error);
        addNotification({ type: 'error', title: 'שגיאה', message: 'לא הצלחנו להתחבר לשרת ה-AI. נסה שוב.' });
+       
+       const errorMsgLocal = {
+         id: 'msg_error_' + Date.now(),
+         sender: 'ai',
+         text: '⚠️ מצטערים, יש עומס חריג כרגע על שרתי ה-AI (שגיאת חיבור). נסה לשלוח את ההודעה שוב בעוד מספר רגעים.',
+         time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+       };
+       setMessages(prev => [...prev, errorMsgLocal]);
     } finally {
       setIsTyping(false);
     }

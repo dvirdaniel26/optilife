@@ -72,6 +72,13 @@ export default function Navbar({ toggleSidebar }) {
         <button className="md:hidden text-primary" onClick={toggleSidebar}>
           <span className="material-symbols-outlined text-2xl">menu</span>
         </button>
+        {/* OptiLife Logo — only on mobile (sidebar shows it on desktop) */}
+        <div className="flex items-center gap-2 md:hidden">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-primary to-secondary text-white flex items-center justify-center shadow-sm shadow-primary/20">
+            <span className="material-symbols-outlined text-sm font-bold">favorite</span>
+          </div>
+          <span className="text-lg font-black font-heading text-primary tracking-tight">OptiLife</span>
+        </div>
       </div>
       <div className="flex items-center gap-sm md:gap-md">
         

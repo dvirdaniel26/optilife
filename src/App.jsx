@@ -35,7 +35,7 @@ function Layout() {
       {/* Overlay for mobile when sidebar is open */}
       {isSidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/20 z-30 md:hidden" 
+          className="fixed inset-0 bg-black/40 z-40 md:hidden transition-opacity" 
           onClick={() => setIsSidebarOpen(false)}
         />
       )}

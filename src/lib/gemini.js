@@ -1,5 +1,31 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
+// Helper to convert raw API/Server errors into user-friendly Hebrew messages
+const getFriendlyErrorMessage = (errorMsg) => {
+  if (!errorMsg) return 'אירעה שגיאה כללית במערכת. אנא נסה שוב.';
+  const msg = errorMsg.toString().toLowerCase();
+  
+  if (msg.includes('429') || msg.includes('quota') || msg.includes('too many requests') || msg.includes('limit')) {
+    return 'המערכת כרגע תחת עומס רב או שמכסת השימוש הסתיימה. אנא נסה/י שוב בעוד מספר דקות.';
+  }
+  if (msg.includes('404') || msg.includes('not found')) {
+    return 'שגיאת חיבור (404). שירות ה-AI אינו זמין כרגע. אנא פנה לתמיכה.';
+  }
+  if (msg.includes('500') || msg.includes('503') || msg.includes('server error')) {
+    return 'שגיאת שרת פנימית. אנו פועלים לתיקון הבעיה, אנא נסה/י שוב בהמשך.';
+  }
+  if (msg.includes('api key') || msg.includes('forbidden') || msg.includes('403')) {
+    return 'שגיאת אימות. יש לבדוק את מפתח ה-API מול המערכת.';
+  }
+  if (msg.includes('failed to fetch') || msg.includes('network error')) {
+    return 'בעיית חיבור לאינטרנט או שהשרת לא מגיב. בדוק את החיבור שלך ונסה שוב.';
+  }
+  
+  // If it's a known non-scary message, we can let it pass, otherwise return generic
+  // But let's return a clean generic error for anything else we don't recognize
+  return 'אירעה שגיאה בעיבוד הבקשה מול שרתי ה-AI. אנא נסה/י שוב.';
+};
+
 // Helper to determine if we should fall back to local direct API call
 const shouldUseLocalDirect = () => {
   const isLocalhost = typeof window !== 'undefined' && 
@@ -90,13 +116,13 @@ export const analyzeMedicalImage = async (base64Data, mimeType, previousResults 
       if (errorJson.rawOutput) {
         console.error("RAW AI OUTPUT THAT FAILED TO PARSE:", errorJson.rawOutput);
       }
-      throw new Error(errorJson.error || `Server error: ${response.status}`);
+      throw new Error(getFriendlyErrorMessage(errorJson.error || `Server error: ${response.status}`));
     }
 
     return await response.json();
   } catch (err) {
     console.error('Secure analysis API fetch error:', err);
-    throw new Error(err.message || 'שגיאה בחיבור לשרת הניתוח המאובטח');
+    throw err; // The error is already friendly from above, just throw it.
   }
 };
 
@@ -226,13 +252,13 @@ export const generateActionPlan = async (labResults, profile = {}) => {
 
     if (!response.ok) {
       const errorJson = await response.json().catch(() => ({}));
-      throw new Error(errorJson.error || `Server error: ${response.status}`);
+      throw new Error(getFriendlyErrorMessage(errorJson.error || `Server error: ${response.status}`));
     }
 
     return await response.json();
   } catch (err) {
     console.error('Secure generate plan API fetch error:', err);
-    throw new Error(err.message || 'שגיאה בחיבור לשרת יצירת התוכנית');
+    throw err;
   }
 };
 
@@ -276,11 +302,11 @@ export const explainMedicalMarker = async (markerName) => {
     });
 
     if (!response.ok) {
-      throw new Error('Server error');
+      throw new Error(getFriendlyErrorMessage(`Server error: ${response.status}`));
     }
     return await response.json();
   } catch (err) {
     console.error('API fetch error:', err);
-    throw new Error('שגיאה בחיבור לשרת ההסברים');
+    throw err;
   }
 };

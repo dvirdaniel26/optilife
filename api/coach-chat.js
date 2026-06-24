@@ -1,13 +1,19 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
+export const maxDuration = 60;
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const apiKey = process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
-  if (!apiKey) {
+  const apiKeys = [
+    process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY,
+    process.env.VITE_GEMINI_API_KEY_FALLBACK || process.env.GEMINI_API_KEY_FALLBACK
+  ].filter(Boolean);
+
+  if (apiKeys.length === 0) {
     return res.status(500).json({ error: 'Gemini API key is not configured on Vercel.' });
   }
 
@@ -43,70 +49,65 @@ export default async function handler(req, res) {
       5. Keep responses concise and focused (max 150-250 words per message). Do not make them overly long.
     `;
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ 
-      model: 'gemini-2.5-flash',
-      systemInstruction: systemInstruction
-    });
+    let responseText;
+    let generatedTitle = null;
+    let lastError;
 
-    // Format chat history for Gemini API. 
-    // Gemini chat API expects format: { role: 'user' | 'model', parts: [{ text: '...' }] }
-    // It must start with 'user' and alternate roles.
-    const formattedHistory = [];
-    if (history && Array.isArray(history)) {
-      history.forEach(msg => {
-        const role = msg.sender === 'user' ? 'user' : 'model';
-        
-        // Exclude local welcome message explicitly
-        if (msg.id === 'welcome') return;
-
-        // Ensure history starts with a user message
-        if (formattedHistory.length === 0 && role !== 'user') return;
-
-        // If consecutive messages have the same role, merge them
-        if (formattedHistory.length > 0 && formattedHistory[formattedHistory.length - 1].role === role) {
-          formattedHistory[formattedHistory.length - 1].parts[0].text += '\n\n' + msg.text;
-          return;
-        }
-
-        formattedHistory.push({
-          role: role,
-          parts: [{ text: msg.text }]
+    for (const key of apiKeys) {
+      try {
+        const genAI = new GoogleGenerativeAI(key);
+        const model = genAI.getGenerativeModel({ 
+          model: 'gemini-1.5-flash',
+          systemInstruction: systemInstruction
         });
-      });
-    }
 
-    const isNewChat = formattedHistory.length === 0;
+        const chat = model.startChat({
+          history: formattedHistory
+        });
 
-    const chat = model.startChat({
-      history: formattedHistory
-    });
+        let result;
+        try {
+          result = await chat.sendMessage(query);
+        } catch (error) {
+          const errMsg = error.message || '';
+          if (error.status === 503 || error.status === 500 || error.status === 504 || errMsg.includes('503') || errMsg.includes('500') || errMsg.includes('504')) {
+            console.log('Gemini API overload/error, retrying after 1.5 seconds...');
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            result = await chat.sendMessage(query);
+          } else {
+            throw error;
+          }
+        }
+        
+        const response = await result.response;
+        responseText = response.text();
 
-    let result;
-    try {
-      result = await chat.sendMessage(query);
-    } catch (error) {
-      if (error.status === 503 || error.message.includes('503')) {
-        console.log('Gemini 503 error, retrying after 1.5 seconds...');
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        result = await chat.sendMessage(query);
-      } else {
-        throw error;
+        if (isNewChat) {
+           try {
+             const titleChat = model.startChat();
+             const titleResult = await titleChat.sendMessage(`Generate a very short title (max 3-5 words) in Hebrew summarizing this user query: "${query}". Respond ONLY with the title, no quotes or prefixes. Make it sound like a conversation topic.`);
+             generatedTitle = (await titleResult.response).text().trim().replace(/['"]/g, '');
+           } catch(e) {
+             console.error('Failed to generate title', e);
+           }
+        }
+        
+        lastError = null;
+        break; // Success! Break the loop
+      } catch (err) {
+        lastError = err;
+        const errMsg = (err.message || '').toLowerCase();
+        if (errMsg.includes('429') || errMsg.includes('quota') || errMsg.includes('403')) {
+          console.warn('Quota exceeded on a Gemini API key in coach chat. Trying fallback key if available...');
+          continue; // Try next key
+        } else {
+          break; // Break and throw for other errors
+        }
       }
     }
-    
-    const response = await result.response;
-    const responseText = response.text();
 
-    let generatedTitle = null;
-    if (isNewChat) {
-       try {
-         const titleChat = model.startChat();
-         const titleResult = await titleChat.sendMessage(`Generate a very short title (max 3-5 words) in Hebrew summarizing this user query: "${query}". Respond ONLY with the title, no quotes or prefixes. Make it sound like a conversation topic.`);
-         generatedTitle = (await titleResult.response).text().trim().replace(/['"]/g, '');
-       } catch(e) {
-         console.error('Failed to generate title', e);
-       }
+    if (lastError) {
+      throw lastError;
     }
 
     return res.status(200).json({ reply: responseText, title: generatedTitle });

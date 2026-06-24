@@ -136,6 +136,7 @@ export default function AiCoachPage() {
           .from('medical_tests')
           .select('*, lab_results(*)')
           .eq('user_id', session.user.id)
+          .eq('status', 'completed')
           .order('test_date', { ascending: false });
 
         if (testsError) throw testsError;

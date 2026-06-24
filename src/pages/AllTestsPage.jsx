@@ -89,10 +89,19 @@ export default function AllTestsPage() {
 
   const handleDeleteFailedTest = async (testId) => {
     try {
-      await supabase.from('medical_tests').delete().eq('id', testId);
+      if (!testId) {
+        alert('מזהה בדיקה חסר.');
+        return;
+      }
+      const { error } = await supabase.from('medical_tests').delete().eq('id', testId);
+      if (error) {
+        alert('שגיאה ממסד הנתונים: ' + error.message);
+        return;
+      }
       setFailedTestToView(null);
       await fetchTests();
     } catch (e) {
+      alert('שגיאה בתקשורת: ' + e.message);
       console.error('Failed to delete test', e);
     }
   };

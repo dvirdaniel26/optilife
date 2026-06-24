@@ -34,7 +34,8 @@ export default function WellnessHubPage() {
           .from('medical_tests')
           .select('*')
           .eq('user_id', session.user.id)
-          .order('created_at', { ascending: false })
+          .eq('status', 'completed')
+          .order('test_date', { ascending: false })
           .limit(1)
           .single();
 

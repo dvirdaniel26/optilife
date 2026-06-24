@@ -60,7 +60,8 @@ export default function ActionPlanPage() {
       let testQuery = supabase
         .from('medical_tests')
         .select('*')
-        .eq('user_id', session.user.id);
+        .eq('user_id', session.user.id)
+        .eq('status', 'completed');
 
       if (requestedTestId) {
         testQuery = testQuery.eq('id', requestedTestId);
@@ -105,6 +106,7 @@ export default function ActionPlanPage() {
               .from('medical_tests')
               .select('test_name, test_date')
               .eq('id', insight.test_id)
+              .eq('status', 'completed')
               .maybeSingle();
 
             return {

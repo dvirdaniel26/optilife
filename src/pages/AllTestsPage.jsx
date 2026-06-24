@@ -53,7 +53,24 @@ export default function AllTestsPage() {
       .select('id, test_name, test_date, created_at, status')
       .eq('user_id', session.user.id);
 
-    if (!error && data) setTests(data);
+    if (!error && data) {
+      // Self-heal stuck 'processing' tests (e.g. if user refreshed the page and killed the background promise)
+      const now = new Date();
+      const healedData = await Promise.all(data.map(async (test) => {
+        if (test.status === 'processing') {
+          const createdAt = new Date(test.created_at);
+          const diffMinutes = (now - createdAt) / 1000 / 60;
+          
+          if (diffMinutes > 2) {
+            // Auto fail stuck tests
+            await supabase.from('medical_tests').update({ status: 'failed' }).eq('id', test.id);
+            return { ...test, status: 'failed' };
+          }
+        }
+        return test;
+      }));
+      setTests(healedData);
+    }
     setLoading(false);
   };
 

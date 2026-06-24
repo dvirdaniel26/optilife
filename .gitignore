@@ -32,3 +32,9 @@ scratch_models.js
 
 .vercel
 .env*
+
+# Test/debug scripts (may contain sensitive API keys)
+test-*.cjs
+test-*.js
+list-models.cjs
+old_ai.jsx

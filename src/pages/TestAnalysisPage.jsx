@@ -155,21 +155,35 @@ export default function TestAnalysisPage() {
       }
 
       // 2. Insert Lab Results
-      const labResultsData = aiResult.results.map(r => ({
-        test_id: testData.id,
-        marker_name: r.marker_name || 'Unknown',
-        measured_value: r.measured_value || 0,
-        unit: r.unit || '',
-        normal_range_min: r.normal_range_min,
-        normal_range_max: r.normal_range_max,
-        is_abnormal: r.is_abnormal || false
-      }));
+      const labResultsData = aiResult.results.map(r => {
+        // Ensure values are numbers or null, to prevent Supabase type errors if columns are numeric
+        const parseNum = (val) => {
+          if (val === null || val === undefined || val === '' || String(val).trim() === 'לא זמין') return null;
+          const parsed = Number(String(val).replace(/[^0-9.-]/g, ''));
+          return isNaN(parsed) ? null : parsed;
+        };
+        
+        return {
+          test_id: testData.id,
+          marker_name: String(r.marker_name || 'Unknown').substring(0, 255),
+          measured_value: parseNum(r.measured_value) || 0,
+          unit: String(r.unit || '').substring(0, 50),
+          normal_range_min: parseNum(r.normal_range_min),
+          normal_range_max: parseNum(r.normal_range_max),
+          is_abnormal: Boolean(r.is_abnormal)
+        };
+      });
 
       const { error: resultsError } = await supabase
         .from('lab_results')
         .insert(labResultsData);
 
-      if (resultsError) throw resultsError;
+      if (resultsError) {
+        // REVERT the status to failed if lab results insertion fails
+        await supabase.from('medical_tests').update({ status: 'failed' }).eq('id', testData.id);
+        console.error("DB Insert Error for lab_results:", resultsError);
+        throw new Error('שגיאה בשמירת מדדי הבדיקה: ' + resultsError.message);
+      }
 
       // 3. Insert AI Insight
       if (aiResult.summary) {
@@ -609,7 +623,7 @@ export default function TestAnalysisPage() {
                           {isAnalyzing ? (
                             <>
                               <Loader2 className="w-5 h-5 animate-spin" />
-                              <span>מתבצע חיווי.. נא לא לסגור חלון זה</span>
+                              <span>מתבצע ניתוח.. נא לא לסגור חלון זה</span>
                             </>
                           ) : (
                             <>

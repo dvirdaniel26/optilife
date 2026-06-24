@@ -1,13 +1,19 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
+export const maxDuration = 60;
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const apiKey = process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
-  if (!apiKey) {
+  const apiKeys = [
+    process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY,
+    process.env.VITE_GEMINI_API_KEY_FALLBACK || process.env.GEMINI_API_KEY_FALLBACK
+  ].filter(Boolean);
+
+  if (apiKeys.length === 0) {
     return res.status(500).json({ error: 'Gemini API key is not configured on Vercel.' });
   }
 
@@ -18,8 +24,6 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing base64Data or mimeType parameters.' });
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const prompt = `
       You are an expert medical AI assistant reading a lab test results document (usually blood tests).
@@ -55,11 +59,11 @@ export default async function handler(req, res) {
         "test_date": "String in YYYY-MM-DD format if a test execution, collection, or document date is found in the document, otherwise null",
         "results": [
           {
-            "marker_name": "String (e.g., Vitamin D, Glucose, Iron)",
+            "marker_name": "String (The standard medical acronym or name of the test, usually in English, e.g., 'WBC', 'Hemoglobin', 'Cholesterol', 'Glucose'. IMPORTANT: Translate or normalize any Hebrew or OCR errors to the standard English medical term so it can be recognized).",
             "measured_value": Number,
             "unit": "String",
-            "normal_range_min": Number (or null if not provided),
-            "normal_range_max": Number (or null if not provided),
+            "normal_range_min": Number (Parse the lower bound of the reference/normal range. If the range is '4.5 - 10', min is 4.5. If the range is '<10', min is 0 or null. Return null if not found),
+            "normal_range_max": Number (Parse the upper bound of the reference/normal range. If the range is '4.5 - 10', max is 10. Return null if not found),
             "is_abnormal": Boolean
           }
         ]
@@ -78,16 +82,42 @@ export default async function handler(req, res) {
     ];
 
     let result;
-    try {
-      result = await model.generateContent([prompt, ...imageParts]);
-    } catch (error) {
-      if (error.status === 503 || error.message.includes('503')) {
-        console.log('Gemini 503 error, retrying after 1.5 seconds...');
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        result = await model.generateContent([prompt, ...imageParts]);
-      } else {
-        throw error;
+    let lastError;
+
+    for (const key of apiKeys) {
+      try {
+        const genAI = new GoogleGenerativeAI(key);
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+        
+        try {
+          result = await model.generateContent([prompt, ...imageParts]);
+        } catch (error) {
+          const errMsg = error.message || '';
+          if (error.status === 503 || error.status === 500 || error.status === 504 || errMsg.includes('503') || errMsg.includes('500') || errMsg.includes('504')) {
+            console.log('Gemini API overload/error, retrying after 1.5 seconds...');
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            result = await model.generateContent([prompt, ...imageParts]);
+          } else {
+            throw error;
+          }
+        }
+        
+        lastError = null;
+        break; // Success! Break the API keys loop
+      } catch (err) {
+        lastError = err;
+        const errMsg = (err.message || '').toLowerCase();
+        if (errMsg.includes('429') || errMsg.includes('quota') || errMsg.includes('403')) {
+          console.warn('Quota exceeded on a Gemini API key. Trying fallback key if available...');
+          continue; // Try next key
+        } else {
+          break; // Break and throw for other errors
+        }
       }
+    }
+
+    if (lastError) {
+      throw lastError;
     }
     
     const response = await result.response;

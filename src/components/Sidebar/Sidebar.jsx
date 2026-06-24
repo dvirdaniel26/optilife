@@ -58,7 +58,7 @@ export default function Sidebar({ isOpen, closeSidebar }) {
           .from('medical_tests')
           .select('id, test_date')
           .eq('user_id', profile.id)
-          .eq('status', 'completed')
+          .in('status', ['completed', 'נותח'])
           .order('test_date', { ascending: false })
           .limit(1);
 

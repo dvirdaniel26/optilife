@@ -19,7 +19,7 @@ function getStatusMeta(status) {
 
 function getStatusIcon(status) {
   const key = (status || '').toLowerCase();
-  if (key === 'completed')  return 'check_circle';
+  if (key === 'completed' || key === 'נותח')  return 'check_circle';
   if (key === 'processing') return 'hourglass_top';
   if (key === 'failed')     return 'error';
   return 'radio_button_unchecked';

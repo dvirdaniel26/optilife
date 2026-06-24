@@ -147,7 +147,7 @@ export default function AnalysisResultsPage() {
             .from('medical_tests')
             .select('*')
             .eq('user_id', session.user.id)
-            .eq('status', 'completed')
+            .in('status', ['completed', 'נותח'])
             .order('created_at', { ascending: false })
             .limit(1)
             .maybeSingle();

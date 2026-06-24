@@ -117,25 +117,29 @@ export default function OverviewPage() {
             const chol = findMarker(['cholesterol', 'כולסטרול']);
             const hemo = findMarker(['hemoglobin', 'המוגלובין', 'hb']);
             
+            // If the hardcoded markers are not found, pick other available markers
+            let finalGluc = gluc;
+            let finalChol = chol;
+            let finalHemo = hemo;
+            
+            const unusedMarkers = results.filter(r => r !== gluc && r !== chol && r !== hemo);
+            
+            if (!finalGluc && unusedMarkers.length > 0) finalGluc = unusedMarkers.shift();
+            if (!finalChol && unusedMarkers.length > 0) finalChol = unusedMarkers.shift();
+            if (!finalHemo && unusedMarkers.length > 0) finalHemo = unusedMarkers.shift();
+
+            const createMetricObj = (marker, defaultUnit) => ({
+              value: marker ? marker.measured_value : '--',
+              status: marker ? (marker.is_abnormal ? 'חורג מהנורמה' : 'מאוזן') : 'אין נתונים',
+              unit: marker ? marker.unit : defaultUnit,
+              statusClass: marker ? (marker.is_abnormal ? 'bg-status-error/10 text-status-error' : 'bg-status-success/10 text-status-success') : 'bg-slate-100 text-on-surface-variant',
+              label: marker ? marker.marker_name : ''
+            });
+
             setMetrics({
-              glucose: {
-                value: gluc ? gluc.measured_value : '--',
-                status: gluc ? (gluc.is_abnormal ? 'חורג מהנורמה' : 'מאוזן') : 'אין נתונים',
-                unit: gluc ? gluc.unit : 'mg/dL',
-                statusClass: gluc ? (gluc.is_abnormal ? 'bg-status-error/10 text-status-error' : 'bg-status-success/10 text-status-success') : 'bg-slate-100 text-on-surface-variant'
-              },
-              cholesterol: {
-                value: chol ? chol.measured_value : '--',
-                status: chol ? (chol.is_abnormal ? 'חורג מהנורמה' : 'מאוזן') : 'אין נתונים',
-                unit: chol ? chol.unit : 'mg/dL',
-                statusClass: chol ? (chol.is_abnormal ? 'bg-status-error/10 text-status-error' : 'bg-status-success/10 text-status-success') : 'bg-slate-100 text-on-surface-variant'
-              },
-              hemoglobin: {
-                value: hemo ? hemo.measured_value : '--',
-                status: hemo ? (hemo.is_abnormal ? 'חורג מהנורמה' : 'מאוזן') : 'אין נתונים',
-                unit: hemo ? hemo.unit : 'g/dL',
-                statusClass: hemo ? (hemo.is_abnormal ? 'bg-status-error/10 text-status-error' : 'bg-status-success/10 text-status-success') : 'bg-slate-100 text-on-surface-variant'
-              }
+              glucose: createMetricObj(finalGluc, 'mg/dL'),
+              cholesterol: createMetricObj(finalChol, 'mg/dL'),
+              hemoglobin: createMetricObj(finalHemo, 'g/dL')
             });
           }
 
@@ -535,7 +539,7 @@ export default function OverviewPage() {
                 <div className="p-2 bg-secondary/5 text-secondary rounded-lg"><Activity className="w-5 h-5" /></div>
                 <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${metrics.glucose.statusClass}`}>{metrics.glucose.status}</span>
               </div>
-              <p className="text-on-surface-variant text-xs mb-1 font-bold">רמת גלוקוז (Glucose)</p>
+              <p className="text-on-surface-variant text-xs mb-1 font-bold">{metrics.glucose.label || 'רמת גלוקוז (Glucose)'}</p>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-black text-primary">{metrics.glucose.value}</span>
                 <span className="text-on-surface-variant text-xs font-semibold">{metrics.glucose.unit}</span>
@@ -550,7 +554,7 @@ export default function OverviewPage() {
                 <div className="p-2 bg-secondary/5 text-secondary rounded-lg"><Activity className="w-5 h-5" /></div>
                 <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${metrics.cholesterol.statusClass}`}>{metrics.cholesterol.status}</span>
               </div>
-              <p className="text-on-surface-variant text-xs mb-1 font-bold">כולסטרול כללי (Cholesterol)</p>
+              <p className="text-on-surface-variant text-xs mb-1 font-bold">{metrics.cholesterol.label || 'כולסטרול כללי (Cholesterol)'}</p>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-black text-primary">{metrics.cholesterol.value}</span>
                 <span className="text-on-surface-variant text-xs font-semibold">{metrics.cholesterol.unit}</span>
@@ -565,7 +569,7 @@ export default function OverviewPage() {
                 <div className="p-2 bg-secondary/5 text-secondary rounded-lg"><Activity className="w-5 h-5" /></div>
                 <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${metrics.hemoglobin.statusClass}`}>{metrics.hemoglobin.status}</span>
               </div>
-              <p className="text-on-surface-variant text-xs mb-1 font-bold">המוגלובין (Hemoglobin)</p>
+              <p className="text-on-surface-variant text-xs mb-1 font-bold">{metrics.hemoglobin.label || 'המוגלובין (Hemoglobin)'}</p>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-black text-primary">{metrics.hemoglobin.value}</span>
                 <span className="text-on-surface-variant text-xs font-semibold">{metrics.hemoglobin.unit}</span>

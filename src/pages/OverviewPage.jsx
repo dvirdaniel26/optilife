@@ -1003,7 +1003,19 @@ export default function OverviewPage() {
           <div className="lg:col-span-4 space-y-8">
             
             {/* Attention Needed (מדדים חורגים) card */}
-            {abnormalMarkers.length > 0 ? (
+            {recentTests.length === 0 ? (
+              <div className="bg-white rounded-3xl p-6 custom-shadow border border-slate-100 space-y-4 text-center">
+                <div className="w-12 h-12 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto">
+                  <Activity className="w-6 h-6" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="font-heading text-lg font-bold text-primary">אין נתונים זמינים</h3>
+                  <p className="text-on-surface-variant text-xs leading-relaxed">
+                    העלה בדיקת דם כדי לראות ניתוח של המדדים שלך.
+                  </p>
+                </div>
+              </div>
+            ) : abnormalMarkers.length > 0 ? (
               <div className="bg-white rounded-3xl p-6 custom-shadow border border-slate-100 space-y-4">
                 <div className="flex items-center gap-2 border-b border-slate-100/60 pb-3">
                   <span className="p-1.5 bg-status-error/10 text-status-error rounded-lg">

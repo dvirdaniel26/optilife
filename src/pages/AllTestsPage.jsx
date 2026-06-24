@@ -6,6 +6,7 @@ import { Loader2, FlaskConical } from 'lucide-react';
 
 const STATUS_LABELS = {
   completed:  { label: 'הושלם',   color: 'bg-emerald-500/10 text-emerald-600 border-emerald-200' },
+  'נותח':     { label: 'הושלם',   color: 'bg-emerald-500/10 text-emerald-600 border-emerald-200' },
   processing: { label: 'בעיבוד',  color: 'bg-amber-500/10 text-amber-600 border-amber-200' },
   pending:    { label: 'ממתין',   color: 'bg-slate-100 text-slate-500 border-slate-200' },
   failed:     { label: 'נכשל',    color: 'bg-red-500/10 text-red-500 border-red-200' },

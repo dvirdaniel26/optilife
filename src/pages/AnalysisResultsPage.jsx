@@ -254,6 +254,23 @@ export default function AnalysisResultsPage() {
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <button 
+              onClick={async () => {
+                if(window.confirm('האם אתה בטוח שברצונך למחוק בדיקה זו?')) {
+                  const { data: { session: currentSession } } = await supabase.auth.getSession();
+                  if (!currentSession) return;
+                  await fetch('/api/delete-test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentSession.access_token}` },
+                    body: JSON.stringify({ testId: testData.id })
+                  });
+                  navigate('/tests');
+                }
+              }}
+              className="bg-red-50 text-red-500 hover:bg-red-100 font-bold px-4 py-2 rounded-xl text-sm transition-all border-0 cursor-pointer"
+            >
+              מחק בדיקה
+            </button>
+            <button 
               onClick={() => navigate('/tests')}
               className="flex items-center gap-1.5 text-slate-600 hover:text-primary font-bold text-sm bg-slate-50 hover:bg-slate-100 px-4 py-2.5 rounded-xl transition-all cursor-pointer w-fit border border-slate-200 hover:border-slate-300 shadow-sm"
             >

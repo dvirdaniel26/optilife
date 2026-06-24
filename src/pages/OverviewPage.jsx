@@ -85,7 +85,7 @@ export default function OverviewPage() {
           .from('medical_tests')
           .select('*')
           .eq('user_id', session.user.id)
-          .eq('status', 'completed')
+          .in('status', ['completed', 'נותח'])
           .order('test_date', { ascending: false });
           
         if (testsError) throw testsError;

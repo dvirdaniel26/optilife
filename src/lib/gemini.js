@@ -59,7 +59,8 @@ const executeWithGemini = async (prompt, imageParts = []) => {
   const hasKeys = await loadApiKeys();
   if (!hasKeys) throw new Error('Gemini API key is missing.');
 
-  let retries = allApiKeys.length > 1 ? allApiKeys.length : 2; 
+  // Allow enough retries to both rotate through keys AND wait out 503 server overloads
+  let retries = Math.max(4, allApiKeys.length * 2);
   let lastError = null;
 
   while (retries >= 0) {

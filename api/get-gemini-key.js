@@ -4,8 +4,9 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  // Get the primary or fallback key from Vercel's backend environment
-  const apiKey = process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY_FALLBACK || process.env.GEMINI_API_KEY_FALLBACK;
+  const primary = process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || '';
+  const fallback = process.env.VITE_GEMINI_API_KEY_FALLBACK || process.env.GEMINI_API_KEY_FALLBACK || '';
+  const apiKey = [primary, fallback].filter(Boolean).join(',');
 
   if (!apiKey) {
     return res.status(404).json({ error: 'Gemini API key not found on server.' });

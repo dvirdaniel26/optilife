@@ -139,6 +139,8 @@ export const analyzeMedicalImage = async (base64Data, mimeType, previousResults 
       let errMsg = error.message || 'שגיאה בפנייה למנוע ה-AI';
       if (errMsg.includes('429') || errMsg.toLowerCase().includes('quota')) {
         errMsg = 'עקב עומס נקודתי על שרתי גוגל (מנוע ה-AI), המערכת בהשהיה של כחצי דקה. אנא המתן מעט ונסה שוב.';
+        // Force refresh key on next call
+        cachedApiKey = null;
       }
       throw new Error(errMsg);
     }
@@ -284,6 +286,8 @@ export const generateActionPlan = async (labResults, profile = {}) => {
       let errMsg = error.message || 'שגיאה בפנייה למנוע ה-AI';
       if (errMsg.includes('429') || errMsg.toLowerCase().includes('quota')) {
         errMsg = 'עקב עומס נקודתי על שרתי גוגל (מנוע ה-AI), המערכת בהשהיה של כחצי דקה. אנא המתן מעט ונסה שוב.';
+        // Force refresh key on next call
+        cachedApiKey = null;
       }
       throw new Error(errMsg);
     }
@@ -344,6 +348,8 @@ export const explainMedicalMarker = async (markerName) => {
       let errMsg = error.message || 'שגיאה בפנייה למנוע ה-AI';
       if (errMsg.includes('429') || errMsg.toLowerCase().includes('quota')) {
         errMsg = 'עקב עומס נקודתי על שרתי גוגל (מנוע ה-AI), המערכת בהשהיה של כחצי דקה. אנא המתן מעט ונסה שוב.';
+        // Force refresh key on next call
+        cachedApiKey = null;
       }
       throw new Error(errMsg);
     }

@@ -28,11 +28,9 @@ const getFriendlyErrorMessage = (errorMsg) => {
 
 // Helper to determine if we should fall back to local direct API call
 const shouldUseLocalDirect = () => {
-  const isLocalhost = typeof window !== 'undefined' && 
-    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
   const hasLocalKey = import.meta.env.VITE_GEMINI_API_KEY && 
     import.meta.env.VITE_GEMINI_API_KEY !== 'your_gemini_api_key_here';
-  return isLocalhost && hasLocalKey;
+  return hasLocalKey;
 };
 
 export const analyzeMedicalImage = async (base64Data, mimeType, previousResults = '') => {

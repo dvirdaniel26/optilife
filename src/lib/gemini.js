@@ -59,7 +59,7 @@ export const analyzeMedicalImage = async (base64Data, mimeType, previousResults 
     console.log('Running analyzeMedicalImage via direct client-side Gemini fallback...');
     const genAI = new GoogleGenerativeAI(apiKey);
     try {
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
       const prompt = `
         You are an expert medical AI assistant reading a lab test results document (usually blood tests).
         Extract the health markers and their results from the image.
@@ -168,7 +168,7 @@ export const generateActionPlan = async (labResults, profile = {}) => {
     console.log('Running generateActionPlan via direct client-side Gemini fallback...');
     const genAI = new GoogleGenerativeAI(apiKey);
     try {
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
       const prompt = `
         You are a clinical dietitian and senior fitness trainer.
         Based on the user's blood test results below, generate a highly customized and complete nutrition plan (תפריט תזונה מלא) and a complete workout/fitness plan (תוכנית כושר ואימונים מפורטת).
@@ -305,7 +305,7 @@ export const explainMedicalMarker = async (markerName) => {
     console.log(`Running explainMedicalMarker for ${markerName} via direct client-side Gemini fallback...`);
     const genAI = new GoogleGenerativeAI(apiKey);
     try {
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
       const prompt = `
         You are a medical lab expert. Explain the blood test marker "${markerName}" in simple, accessible Hebrew for a general audience.
         Return EXACTLY a raw JSON object. Do not use markdown like \`\`\`json.

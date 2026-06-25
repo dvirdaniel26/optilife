@@ -77,12 +77,13 @@ export default function TestAnalysisPage() {
         if (error) throw error;
         setRecentTests(data || []);
 
-        // 2. Fetch total tests count (excluding failed tests)
+        // 2. Fetch total tests count (excluding failed & processing tests)
         const { count, error: countError } = await supabase
           .from('medical_tests')
           .select('*', { count: 'exact', head: true })
           .eq('user_id', session.user.id)
-          .neq('status', 'failed');
+          .neq('status', 'failed')
+          .neq('status', 'processing');
 
         if (!countError) {
           setTotalTests(count || 0);

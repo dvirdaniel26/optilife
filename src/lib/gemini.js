@@ -108,7 +108,24 @@ export const analyzeMedicalImage = async (base64Data, mimeType, previousResults 
       const cleanBase64 = base64Data.replace(/^data:(image\/(png|jpeg|jpg|webp)|application\/pdf);base64,/, '');
       const imageParts = [{ inlineData: { data: cleanBase64, mimeType } }];
 
-      const result = await model.generateContent([prompt, ...imageParts]);
+      let result;
+      let retries = 2;
+      while (retries >= 0) {
+        try {
+          result = await model.generateContent([prompt, ...imageParts]);
+          break;
+        } catch (error) {
+          if (retries === 0) throw error;
+          const errMsg = (error.message || '').toLowerCase();
+          if (error.status === 503 || error.status === 500 || error.status === 504 || errMsg.includes('503') || errMsg.includes('500') || errMsg.includes('504')) {
+            console.log(`Gemini API overload (503). Retrying... (${retries} attempts left)`);
+            await new Promise(r => setTimeout(r, 2000));
+            retries--;
+          } else {
+            throw error;
+          }
+        }
+      }
       const response = await result.response;
       const text = response.text();
       const cleanedText = text.replace(/```json/gi, '').replace(/```/g, '').trim();

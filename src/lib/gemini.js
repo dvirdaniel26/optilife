@@ -72,7 +72,14 @@ const executeWithGemini = async (prompt, imageParts = []) => {
       const result = await model.generateContent(imageParts.length > 0 ? [prompt, ...imageParts] : [prompt]);
       const response = await result.response;
       const text = response.text();
-      let cleanedText = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+      let jsonText = text;
+      const startIndex = text.indexOf('{');
+      const endIndex = text.lastIndexOf('}');
+      if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
+        jsonText = text.substring(startIndex, endIndex + 1);
+      }
+      
+      let cleanedText = jsonText.replace(/```json/gi, '').replace(/```/g, '').trim();
       cleanedText = cleanedText.replace(/[\n\r\t]/g, ' '); 
       return JSON.parse(cleanedText);
     } catch (error) {

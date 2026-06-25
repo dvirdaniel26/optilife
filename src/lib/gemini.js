@@ -26,18 +26,38 @@ const getFriendlyErrorMessage = (errorMsg) => {
   return 'אירעה שגיאה בעיבוד הבקשה מול שרתי ה-AI. אנא נסה/י שוב.';
 };
 
-// Helper to determine if we should fall back to local direct API call
-const shouldUseLocalDirect = () => {
-  const hasLocalKey = import.meta.env.VITE_GEMINI_API_KEY && 
-    import.meta.env.VITE_GEMINI_API_KEY !== 'your_gemini_api_key_here';
-  return hasLocalKey;
+let cachedApiKey = null;
+
+const getApiKey = async () => {
+  if (cachedApiKey) return cachedApiKey;
+  
+  const localKey = import.meta.env.VITE_GEMINI_API_KEY;
+  if (localKey && localKey !== 'your_gemini_api_key_here') {
+    cachedApiKey = localKey;
+    return cachedApiKey;
+  }
+
+  try {
+    const res = await fetch('/api/get-gemini-key', { method: 'POST' });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.key) {
+        cachedApiKey = data.key;
+        return cachedApiKey;
+      }
+    }
+  } catch (e) {
+    console.error('Failed to fetch dynamic API key', e);
+  }
+  return null;
 };
 
 export const analyzeMedicalImage = async (base64Data, mimeType, previousResults = '') => {
-  // Check if we can run directly (localhost fallback for easy local dev)
-  if (shouldUseLocalDirect()) {
+  const apiKey = await getApiKey();
+  
+  if (apiKey) {
     console.log('Running analyzeMedicalImage via direct client-side Gemini fallback...');
-    const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
+    const genAI = new GoogleGenerativeAI(apiKey);
     try {
       const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
       const prompt = `
@@ -125,10 +145,11 @@ export const analyzeMedicalImage = async (base64Data, mimeType, previousResults 
 };
 
 export const generateActionPlan = async (labResults, profile = {}) => {
-  // Check if we can run directly (localhost fallback for easy local dev)
-  if (shouldUseLocalDirect()) {
+  const apiKey = await getApiKey();
+  
+  if (apiKey) {
     console.log('Running generateActionPlan via direct client-side Gemini fallback...');
-    const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
+    const genAI = new GoogleGenerativeAI(apiKey);
     try {
       const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
       const prompt = `
@@ -261,9 +282,11 @@ export const generateActionPlan = async (labResults, profile = {}) => {
 };
 
 export const explainMedicalMarker = async (markerName) => {
-  if (shouldUseLocalDirect()) {
+  const apiKey = await getApiKey();
+  
+  if (apiKey) {
     console.log(`Running explainMedicalMarker for ${markerName} via direct client-side Gemini fallback...`);
-    const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
+    const genAI = new GoogleGenerativeAI(apiKey);
     try {
       const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
       const prompt = `

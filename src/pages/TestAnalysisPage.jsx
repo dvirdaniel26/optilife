@@ -134,11 +134,27 @@ export default function TestAnalysisPage() {
             status: 'completed',
           })
           .eq('id', pendingTestId)
-          .select()
-          .single();
+          .select();
 
         if (testError) throw testError;
-        testData = data;
+        
+        if (data && data.length > 0) {
+          testData = data[0];
+        } else {
+          console.warn('Pending record not found (deleted?), creating a new one as fallback.');
+          const { data: newData, error: newError } = await supabase
+            .from('medical_tests')
+            .insert([{
+              user_id: session.user.id,
+              test_name: selectedFile ? selectedFile.name : 'ניתוח בדיקה (AI)',
+              test_date: chosenDate,
+              status: 'completed',
+            }])
+            .select()
+            .single();
+          if (newError) throw newError;
+          testData = newData;
+        }
       } else {
         // Fallback: Create a Medical Test record if not pre-created
         const { data, error: testError } = await supabase

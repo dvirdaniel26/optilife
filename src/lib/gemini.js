@@ -54,19 +54,24 @@ const loadApiKeys = async () => {
   return allApiKeys.length > 0;
 };
 
-// Helper to run Gemini with built-in Key Rotation and Retry
+// Helper to run Gemini with built-in Key Rotation, Model Rotation and Exponential Retry
+const MODELS = ['gemini-2.5-flash', 'gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-1.5-flash-8b'];
+
 const executeWithGemini = async (prompt, imageParts = []) => {
   const hasKeys = await loadApiKeys();
   if (!hasKeys) throw new Error('Gemini API key is missing.');
 
   // Allow enough retries to both rotate through keys AND wait out 503 server overloads
-  let retries = Math.max(4, allApiKeys.length * 2);
+  let retries = Math.max(6, allApiKeys.length * 3);
   let lastError = null;
+  let modelIndex = 0;
+  let delay = 2000;
 
   while (retries >= 0) {
     const currentKey = allApiKeys[currentKeyIndex];
+    const currentModelName = MODELS[modelIndex];
     const genAI = new GoogleGenerativeAI(currentKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const model = genAI.getGenerativeModel({ model: currentModelName });
     
     try {
       const result = await model.generateContent(imageParts.length > 0 ? [prompt, ...imageParts] : [prompt]);
@@ -86,24 +91,41 @@ const executeWithGemini = async (prompt, imageParts = []) => {
       lastError = error;
       const errMsg = (error.message || '').toLowerCase();
       
-      // If quota exceeded, ROTATE key and try immediately
+      // If model not found (404), rotate model immediately
+      if (error.status === 404 || errMsg.includes('404') || errMsg.includes('not found')) {
+        console.warn(`[Gemini] Model ${currentModelName} not found (404). Switching model...`);
+        modelIndex = (modelIndex + 1) % MODELS.length;
+        retries--;
+        continue;
+      }
+      
+      // If quota exceeded (429), ROTATE key and try immediately
       if (error.status === 429 || errMsg.includes('429') || errMsg.includes('quota') || errMsg.includes('too many')) {
-        console.warn(`[Gemini] Key #${currentKeyIndex + 1} exhausted (429).`);
+        console.warn(`[Gemini] Key #${currentKeyIndex + 1} exhausted (429) on model ${currentModelName}.`);
         if (allApiKeys.length > 1) {
           currentKeyIndex = (currentKeyIndex + 1) % allApiKeys.length;
           console.log(`[Gemini] Switched to Key #${currentKeyIndex + 1}. Retrying seamlessly...`);
         } else {
-          console.warn(`[Gemini] No backup keys available. Waiting before retry.`);
-          await new Promise(r => setTimeout(r, 2000));
+          console.warn(`[Gemini] No backup keys available. Waiting ${delay}ms before retry.`);
+          await new Promise(r => setTimeout(r, delay));
+          delay = Math.min(delay * 1.5, 8000);
         }
         retries--;
         continue;
       }
       
-      // If server overload, wait 2s and try again
-      if (error.status === 503 || error.status === 500 || error.status === 504 || errMsg.includes('503')) {
-        console.warn(`[Gemini] Server overload (503). Retrying...`);
-        await new Promise(r => setTimeout(r, 2000));
+      // If server overload (503/500/504), wait with exponential backoff and try switching model
+      if (error.status === 503 || error.status === 500 || error.status === 504 || errMsg.includes('503') || errMsg.includes('500') || errMsg.includes('504')) {
+        console.warn(`[Gemini] Server overload (503) on model ${currentModelName}. Waiting ${delay}ms...`);
+        await new Promise(r => setTimeout(r, delay));
+        delay = Math.min(delay * 1.5, 8000);
+        
+        // Every other 503 failure, switch the model to bypass cluster outages
+        if (retries % 2 === 0) {
+           modelIndex = (modelIndex + 1) % MODELS.length;
+           console.log(`[Gemini] Switching to model ${MODELS[modelIndex]} to avoid 503 outage...`);
+        }
+        
         retries--;
         continue;
       }
@@ -114,8 +136,8 @@ const executeWithGemini = async (prompt, imageParts = []) => {
   }
   
   let finalMsg = lastError?.message || 'שגיאה בפנייה למנוע ה-AI';
-  if (finalMsg.includes('429') || finalMsg.toLowerCase().includes('quota')) {
-    finalMsg = 'כל הגיבויים של המערכת תחת עומס. אנא המתן כחצי דקה ונסה שוב.';
+  if (finalMsg.includes('429') || finalMsg.toLowerCase().includes('quota') || finalMsg.includes('503')) {
+    finalMsg = 'כל שרתי ה-AI כרגע תחת עומס עולמי חריג. אנא המתן דקה ונסה שוב, או בדוק מול מודל אחר.';
   }
   throw new Error(finalMsg);
 };

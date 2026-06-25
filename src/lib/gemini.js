@@ -28,12 +28,13 @@ const getFriendlyErrorMessage = (errorMsg) => {
 
 let cachedApiKey = null;
 
-const getApiKey = async () => {
-  if (cachedApiKey) return cachedApiKey;
+const getApiKey = async (forceRefresh = false) => {
+  if (cachedApiKey && !forceRefresh) return cachedApiKey;
   
   const localKey = import.meta.env.VITE_GEMINI_API_KEY;
   if (localKey && localKey !== 'your_gemini_api_key_here') {
-    cachedApiKey = localKey;
+    const keys = localKey.split(',').map(k => k.trim()).filter(k => k);
+    cachedApiKey = keys[Math.floor(Math.random() * keys.length)];
     return cachedApiKey;
   }
 

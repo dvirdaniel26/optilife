@@ -11,5 +11,9 @@ export default async function handler(req, res) {
     return res.status(404).json({ error: 'Gemini API key not found on server.' });
   }
 
-  return res.status(200).json({ key: apiKey });
+  // If there are multiple keys (comma-separated), pick a random one to distribute load
+  const keys = apiKey.split(',').map(k => k.trim()).filter(k => k);
+  const randomKey = keys[Math.floor(Math.random() * keys.length)];
+
+  return res.status(200).json({ key: randomKey });
 }

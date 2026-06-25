@@ -46,6 +46,7 @@ export default function AllTestsPage() {
   const [sortKey, setSortKey]     = useState('created_at');
   const [sortDir, setSortDir]     = useState('desc');
   const [failedTestToView, setFailedTestToView] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchTests = async () => {
     if (!session?.user?.id) return;
@@ -89,9 +90,11 @@ export default function AllTestsPage() {
   }, [session]);
 
   const handleDeleteFailedTest = async (testId) => {
+    setIsDeleting(true);
     try {
       if (!testId) {
         alert('מזהה בדיקה חסר.');
+        setIsDeleting(false);
         return;
       }
       
@@ -100,6 +103,7 @@ export default function AllTestsPage() {
       
       if (!token) {
         alert('שגיאת התחברות: אנא התחבר מחדש.');
+        setIsDeleting(false);
         return;
       }
 
@@ -122,6 +126,8 @@ export default function AllTestsPage() {
     } catch (e) {
       alert('שגיאה בתקשורת: ' + e.message);
       console.error('Failed to delete test', e);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -316,9 +322,21 @@ export default function AllTestsPage() {
             <div className="flex gap-3">
               <button 
                 onClick={() => handleDeleteFailedTest(failedTestToView.id)}
-                className="flex-1 bg-red-500 text-white py-2.5 rounded-xl font-bold hover:bg-red-600 transition-colors shadow-sm"
+                disabled={isDeleting}
+                className={`flex-1 py-2.5 rounded-xl font-bold shadow-sm flex items-center justify-center gap-2 transition-colors ${
+                  isDeleting 
+                    ? 'bg-red-300 text-white cursor-not-allowed' 
+                    : 'bg-red-500 text-white hover:bg-red-600'
+                }`}
               >
-                מחק בדיקה
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    מוחק...
+                  </>
+                ) : (
+                  'מחק בדיקה'
+                )}
               </button>
               <button 
                 onClick={() => setFailedTestToView(null)}

@@ -56,6 +56,7 @@ export default function AnalysisResultsPage() {
   const passedTestId = location.state?.testId;
 
   const [loading, setLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [testData, setTestData] = useState(null);
   const [labResults, setLabResults] = useState([]);
   const [insight, setInsight] = useState(null);
@@ -256,19 +257,37 @@ export default function AnalysisResultsPage() {
             <button 
               onClick={async () => {
                 if(window.confirm('האם אתה בטוח שברצונך למחוק בדיקה זו?')) {
-                  const { data: { session: currentSession } } = await supabase.auth.getSession();
-                  if (!currentSession) return;
-                  await fetch('/api/delete-test', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentSession.access_token}` },
-                    body: JSON.stringify({ testId: testData.id })
-                  });
-                  navigate('/tests');
+                  setIsDeleting(true);
+                  try {
+                    const { data: { session: currentSession } } = await supabase.auth.getSession();
+                    if (!currentSession) return;
+                    await fetch('/api/delete-test', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentSession.access_token}` },
+                      body: JSON.stringify({ testId: testData.id })
+                    });
+                    navigate('/tests');
+                  } catch (e) {
+                    console.error('Failed to delete test', e);
+                    setIsDeleting(false);
+                  }
                 }
               }}
-              className="bg-red-50 text-red-500 hover:bg-red-100 font-bold px-4 py-2 rounded-xl text-sm transition-all border-0 cursor-pointer"
+              disabled={isDeleting}
+              className={`font-bold px-4 py-2 rounded-xl text-sm transition-all border-0 ${
+                isDeleting 
+                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed flex items-center gap-2' 
+                  : 'bg-red-50 text-red-500 hover:bg-red-100 cursor-pointer'
+              }`}
             >
-              מחק בדיקה
+              {isDeleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  מוחק...
+                </>
+              ) : (
+                'מחק בדיקה'
+              )}
             </button>
             <button 
               onClick={() => navigate('/tests')}

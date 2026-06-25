@@ -266,10 +266,6 @@ export default function TestAnalysisPage() {
       console.warn('Failed to create pending test', e);
     }
 
-    // 2. Start a 5-second timer to navigate the user to the All Tests page if analysis takes too long
-    const timeoutId = setTimeout(() => {
-      navigate('/tests');
-    }, 5000);
 
     try {
       // 3. Convert file to Base64
@@ -321,11 +317,11 @@ export default function TestAnalysisPage() {
       // Update the pending test with success
       await saveAnalysisResults(aiResult, finalDate, newPendingTestId);
 
-      clearTimeout(timeoutId); // If it finished under 5s, we clear it because saveAnalysisResults will navigate to /analysis
+
 
     } catch (err) {
       console.error(err);
-      clearTimeout(timeoutId);
+
 
       const errMsg = err.message || (isFemale ? 'אירעה שגיאה במהלך הניתוח. נסי שוב.' : 'אירעה שגיאה במהלך הניתוח. נסה שוב.');
       

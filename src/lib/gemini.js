@@ -182,8 +182,8 @@ export const analyzeMedicalImage = async (base64Data, mimeType, previousResults 
             "marker_name": "String (e.g., Vitamin D, Glucose, Iron)",
             "measured_value": Number,
             "unit": "String",
-            "normal_range_min": Number (or null if not provided),
-            "normal_range_max": Number (or null if not provided),
+            "normal_range_min": Number (If not in the document, you MUST use your medical knowledge to provide the standard universal minimum for this marker and unit. Only use null if completely unknown.),
+            "normal_range_max": Number (If not in the document, you MUST use your medical knowledge to provide the standard universal maximum for this marker and unit. Only use null if completely unknown.),
             "is_abnormal": Boolean
           }
         ]

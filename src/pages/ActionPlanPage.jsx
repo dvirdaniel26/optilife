@@ -3,7 +3,7 @@ import { UserContext } from '../App';
 import { NotificationsContext } from '../context/NotificationsContext';
 import { supabase } from '../lib/supabase';
 import { generateActionPlan } from '../lib/gemini';
-import { Loader2, AlertCircle, Sparkles, Check, Flame, Salad, Printer, Dumbbell, Calendar, ShieldAlert, ChevronLeft, ChevronDown } from 'lucide-react';
+import { Loader2, AlertCircle, Sparkles, Check, Flame, Salad, Printer, Dumbbell, Calendar, ShieldAlert, ChevronLeft, ChevronDown, Share2 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 export default function ActionPlanPage() {
@@ -476,10 +476,10 @@ export default function ActionPlanPage() {
     <main className="md:pr-72 pt-24 min-h-screen bg-background print:pr-0 print:pt-4" dir="rtl">
       <div className="p-4 sm:p-6 md:p-8 max-w-5xl mx-auto print:max-w-full print:p-0 space-y-5">
 
-        {/* ── Page Header ── */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 print:hidden">
+        {/* ── Header ── */}
+        <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4 mb-8 border-b border-slate-100 pb-4">
           <div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 mb-2">
               {allPlans.length > 1 && (
                 <button 
                   onClick={() => setViewMode('list')}
@@ -491,7 +491,7 @@ export default function ActionPlanPage() {
               )}
               <h1 className="font-heading text-3xl font-black text-primary">תוכנית הבריאות</h1>
             </div>
-            <p className="text-on-surface-variant text-sm mt-0.5 font-semibold pr-13">
+            <p className="text-on-surface-variant text-sm mt-0.5 font-semibold pr-1">
               {selectedPlanMeta
                 ? `${selectedPlanMeta.testName} — ${new Date(selectedPlanMeta.testDate).toLocaleDateString('he-IL')}`
                 : 'תוכנית מותאמת אישית לפי בדיקות הדם'}
@@ -500,6 +500,28 @@ export default function ActionPlanPage() {
           <div className="flex items-center gap-2">
             <button onClick={() => window.print()} className="flex items-center gap-1.5 text-on-surface-variant hover:text-primary border border-slate-200 hover:border-slate-300 bg-white font-semibold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer">
               <Printer className="w-4 h-4" /> הדפס
+            </button>
+            <button 
+              onClick={async () => {
+                const shareData = {
+                  title: 'תוכנית הבריאות שלי ב-OptiLife',
+                  text: 'הנה תוכנית התזונה והאימונים המותאמת אישית שלי מ-OptiLife!',
+                  url: window.location.href,
+                };
+                if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+                  try {
+                    await navigator.share(shareData);
+                  } catch (e) {
+                    console.error('Error sharing', e);
+                  }
+                } else {
+                  const text = encodeURIComponent(shareData.text + '\n' + shareData.url);
+                  window.open(`https://wa.me/?text=${text}`, '_blank');
+                }
+              }}
+              className="flex items-center gap-1.5 text-emerald-600 hover:text-emerald-700 border border-emerald-200 hover:border-emerald-300 bg-emerald-50 hover:bg-emerald-100 font-semibold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer"
+            >
+              <Share2 className="w-4 h-4" /> שתף
             </button>
             {!latestTestHasPlan && isAllowedToGenerate && (
               <button onClick={handleCreatePlan} className="flex items-center gap-1.5 bg-accent-action text-primary font-bold text-xs px-4 py-2 rounded-xl shadow hover:shadow-md transition-all hover:scale-105 active:scale-95 border-0 cursor-pointer">

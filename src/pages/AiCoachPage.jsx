@@ -403,7 +403,7 @@ export default function AiCoachPage() {
             {/* Actions */}
             <div className="flex flex-col sm:flex-row gap-sm w-full max-w-md mt-sm justify-center">
               <button 
-                onClick={() => navigate('/checkout', { state: { plan: 'ai_ultimate' } })}
+                onClick={() => navigate('/pricing')}
                 className="px-xl py-3 bg-gradient-to-r from-secondary to-amber-500 text-white font-bold rounded-xl text-xs transition-all duration-200 active:scale-95 shadow-md hover:shadow-lg flex items-center justify-center gap-xs cursor-pointer border-0 w-full sm:w-auto"
               >
                 <Sparkles className="w-4 h-4 fill-current text-white animate-pulse" />

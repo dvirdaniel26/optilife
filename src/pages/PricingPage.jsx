@@ -17,14 +17,6 @@ export default function PricingPage() {
       return;
     }
 
-    // If they already have an active/cancelled subscription or customer ID, redirect them to Customer Portal to change plan
-    if (profile?.stripe_customer_id || currentTier !== 'free') {
-      const portalLink = import.meta.env.VITE_STRIPE_CUSTOMER_PORTAL_LINK;
-      if (portalLink) {
-        window.location.href = `${portalLink}?prefilled_email=${encodeURIComponent(session.user.email)}`;
-        return;
-      }
-    }
 
     const standardLink = import.meta.env.VITE_STRIPE_PAYMENT_LINK_STANDARD;
     const premiumLink = import.meta.env.VITE_STRIPE_PAYMENT_LINK;

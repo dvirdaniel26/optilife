@@ -79,6 +79,7 @@ export const analyzeMedicalImage = async (base64Data, mimeType, previousResults 
         6. Write warmly and professionally, as if addressing the patient directly.
         7. DO NOT start the summary with a greeting like "שלום" or "שלום רב". Start directly with the medical analysis.
         8. CRITICAL: DO NOT use double quotes (") anywhere inside the summary text. For Hebrew acronyms like ד"ל, use single quotes (ד'ל) or spell it out (דציליטר). Double quotes will break the JSON parser.
+        9. CRITICAL JSON COMPLIANCE: DO NOT output actual physical line breaks (newlines) inside the string values. To separate paragraphs, you MUST type the literal escape sequence "\\n\\n" (backslash n). All text for a JSON value MUST be on one continuous line.
 
         ${previousResults ? `
         CRITICAL COMPARISON: Compare the new results with the following previous blood test results and specify if there is any improvement, worsening, or stable trends for key metrics (like glucose, cholesterol, etc.) in the Hebrew summary:
@@ -128,7 +129,9 @@ export const analyzeMedicalImage = async (base64Data, mimeType, previousResults 
       }
       const response = await result.response;
       const text = response.text();
-      const cleanedText = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+      // Remove physical newlines and control characters that break JSON parsing
+      let cleanedText = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+      cleanedText = cleanedText.replace(/[\n\r\t]/g, ' '); 
       return JSON.parse(cleanedText);
     } catch (error) {
       console.error('Local direct Gemini error:', error);
@@ -268,7 +271,8 @@ export const generateActionPlan = async (labResults, profile = {}) => {
       const result = await model.generateContent([prompt]);
       const response = await result.response;
       const text = response.text();
-      const cleanedText = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+      let cleanedText = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+      cleanedText = cleanedText.replace(/[\n\r\t]/g, ' '); 
       return JSON.parse(cleanedText);
     } catch (error) {
       console.error('Local direct Gemini error:', error);
@@ -323,7 +327,8 @@ export const explainMedicalMarker = async (markerName) => {
       const result = await model.generateContent([prompt]);
       const response = await result.response;
       const text = response.text();
-      const cleanedText = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+      let cleanedText = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+      cleanedText = cleanedText.replace(/[\n\r\t]/g, ' '); 
       return JSON.parse(cleanedText);
     } catch (error) {
       console.error('Local direct Gemini error:', error);

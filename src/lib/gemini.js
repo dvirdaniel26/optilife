@@ -149,21 +149,21 @@ export const analyzeMedicalImage = async (base64Data, mimeType, previousResults 
       Extract the health markers and their results from the image.
       Identify if there is any test date, collection date, or report date listed in the document.
       Provide a structured, beautifully formatted medical summary in HEBREW based on the overall results.
-      
+
       CRITICAL RULES FOR THE HEBREW SUMMARY — READ CAREFULLY:
-      1. Write a HOLISTIC NARRATIVE ANALYSIS in Hebrew — like a doctor explaining results in a consultation. DO NOT list each marker one by one.
-      2. The table of individual markers is shown separately. The summary should ADD VALUE by connecting the dots: explain what the overall picture means, how markers relate to each other, what patterns you see.
-      3. Structure the summary as 2-4 readable paragraphs (separated by \\n\\n). Each paragraph covers a theme:
-         - Paragraph 1: Overall impression and key findings (e.g., "Most results look healthy, but there are a few areas worth attention...")
-         - Paragraph 2: Connect the abnormal markers — what do they suggest together? (e.g., low Vitamin D + elevated ALT may suggest...)
-         - Paragraph 3 (optional): Practical lifestyle recommendations based on the pattern
-         - Paragraph 4 (optional): If comparison data exists, describe trends over time
-      4. Bold key medical terms and values using double asterisks (e.g., **ויטמין D**, **ALT**).
-      5. DO NOT repeat each marker's value — that is shown in the table. Focus on meaning, patterns, and clinical significance.
-      6. Write warmly and professionally, as if addressing the patient directly.
-      7. DO NOT start the summary with a greeting like "שלום" or "שלום רב". Start directly with the medical analysis.
-      8. CRITICAL: DO NOT use double quotes (") anywhere inside the summary text. For Hebrew acronyms like ד"ל, use single quotes (ד'ל) or spell it out (דציליטר). Double quotes will break the JSON parser.
-      9. CRITICAL JSON COMPLIANCE: DO NOT output actual physical line breaks (newlines) inside the string values. To separate paragraphs, you MUST type the literal escape sequence "\\n\\n" (backslash n). All text for a JSON value MUST be on one continuous line.
+      1. Write a HIGHLY PERSONALIZED, SPECIFIC, AND ACTIONABLE analysis in Hebrew.
+      2. CRITICAL: DO NOT use generic medical disclaimers like "מומלץ להתייעץ עם הרופא המטפל", "יש להמשיך מעקב", or "התייעץ עם מומחה". The user already knows this. You are an expert medical AI giving them direct, deep insights.
+      3. Talk to the user directly in the FIRST PERSON ("אני רואה ש...", "המדד שלך מצביע על..."). Make it feel like a private consultation with a top-tier functional medicine doctor.
+      4. DO NOT just summarize the data. CONNECT THE DOTS biologically. If multiple markers are abnormal, explain the exact biological connection between them (e.g., how insulin resistance impacts lipid profiles).
+      5. Give 1-2 EXTREMELY SPECIFIC and actionable lifestyle/nutrition tips based on the EXACT markers that are abnormal. Do NOT give generic advice like "תזונה מאוזנת ופעילות גופנית". Instead, give targeted advice (e.g., "שילוב של סיבים מסיסים כמו פסיליום וצמצום פחמימות ריקות יכול לסייע בהורדת רמות ה-LDL שלך").
+      6. Structure the summary as 3 readable paragraphs (separated by \n\n):
+         - Paragraph 1: Direct analysis of the most critical abnormal findings and their biological meaning in the user's body.
+         - Paragraph 2: The interconnected biological pattern you see across the different markers (the "Why").
+         - Paragraph 3: Specific, targeted, non-obvious action items they can take right now.
+      7. Bold key medical terms and values using double asterisks (e.g., **ויטמין D**, **LPa**).
+      8. DO NOT start the summary with a greeting like "שלום". Start directly with the analysis.
+      9. CRITICAL: DO NOT use double quotes (") anywhere inside the summary text. Use single quotes (ד'ל).
+      10. CRITICAL JSON COMPLIANCE: DO NOT output actual physical line breaks. Use the literal escape sequence "\\n\\n". All text for a JSON value MUST be on one continuous line.
 
       ${previousResults ? `
       CRITICAL COMPARISON: Compare the new results with the following previous blood test results and specify if there is any improvement, worsening, or stable trends for key metrics (like glucose, cholesterol, etc.) in the Hebrew summary:

@@ -283,6 +283,57 @@ vercel dev
 
 <div align="right" dir="rtl">
 
+## 🖼️ הצצה למערכת (Screenshots)
+
+</div>
+
+<div align="center">
+  <img src="screenshots/landing.png" alt="דף הבית" width="800" />
+  <p><em>דף הבית (Landing Page) - עיצוב מודרני, נקי ומזמין</em></p>
+  
+  <br><br>
+  
+  <img src="screenshots/login.png" alt="התחברות והרשמה" width="800" />
+  <p><em>מסך הרשמה והתחברות מאובטח (Supabase Auth)</em></p>
+
+  <br><br>
+  
+  <img src="screenshots/dashboard.png" alt="סקירה כללית" width="800" />
+  <p><em>לוח הבקרה (Dashboard) - סקירת מדדים עדכנית, חריגות וסיכום רפואי</em></p>
+
+  <br><br>
+  
+  <img src="screenshots/upload.png" alt="העלאת בדיקת דם" width="800" />
+  <p><em>אזור העלאת מסמכי הבדיקה (PDF/תמונות) לניתוח ה-AI</em></p>
+
+  <br><br>
+  
+  <img src="screenshots/analysis-top.png" alt="ניתוח תוצאות" width="800" />
+  <p><em>ניתוח מקצועי ומפורט של תוצאות המעבדה על ידי מודל Gemini Vision</em></p>
+
+  <br><br>
+  
+  <img src="screenshots/analysis-bottom.png" alt="פירוט מדדים" width="800" />
+  <p><em>טבלת מדדים מובנית שחולצה אוטומטית מתוך הבדיקה</em></p>
+
+  <br><br>
+  
+  <img src="screenshots/plans.png" alt="היסטוריית תוכניות" width="800" />
+  <p><em>מעקב כרונולוגי והיסטוריית תוכניות הבריאות של המשתמש</em></p>
+
+  <br><br>
+  
+  <img src="screenshots/action_plan.png" alt="תוכנית פעולה" width="800" />
+  <p><em>תוכנית פעולה אקטיבית ומפורטת המותאמת אישית לתיקון החוסרים הקליניים</em></p>
+
+  <br><br>
+  
+  <img src="screenshots/chat.png" alt="מאמן בריאות אישי" width="800" />
+  <p><em>צ'אט אינטראקטיבי המייעץ על סמך פרופיל הבריאות הייחודי של המשתמש</em></p>
+</div>
+
+<div align="right" dir="rtl">
+
 ## 🎁 מצוינות, Vibe Coding ו-AI
 הפרויקט מכוון למלוא נקודות הבונוס בזכות שלושה אלמנטים בולטים:
 

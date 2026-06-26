@@ -330,6 +330,31 @@ vercel dev
   
   <img src="screenshots/chat.png" alt="מאמן בריאות אישי" width="800" />
   <p><em>צ'אט אינטראקטיבי המייעץ על סמך פרופיל הבריאות הייחודי של המשתמש</em></p>
+
+  <br><br>
+  
+  <img src="screenshots/supplements.png" alt="תוספים וויטמינים" width="800" />
+  <p><em>מרכז הבריאות האישי - המלצות חכמות לתוספי תזונה וויטמינים המבוססות על בדיקות הדם</em></p>
+
+  <br><br>
+  
+  <img src="screenshots/habits.png" alt="מעקב הרגלים יומי" width="800" />
+  <p><em>מרכז הבריאות האישי - מעקב דינמי אחר הרגלים יומיומיים (שתייה, שינה, צעדים)</em></p>
+
+  <br><br>
+  
+  <img src="screenshots/challenges.png" alt="אתגרים" width="800" />
+  <p><em>מרכז הבריאות האישי - אתגרים אישיים חודשיים הממוקדים בשיפור המדדים הלקויים</em></p>
+
+  <br><br>
+  
+  <img src="screenshots/notifications.png" alt="התראות מערכת" width="800" />
+  <p><em>תיבת הודעות מתקדמת לניהול נוח של התראות המערכת ועדכוני ה-AI</em></p>
+
+  <br><br>
+  
+  <img src="screenshots/support.png" alt="עזרה ותמיכה" width="800" />
+  <p><em>מודל עזרה, תמיכה ושאלות נפוצות (FAQ) נגיש למשתמש</em></p>
 </div>
 
 <div align="right" dir="rtl">

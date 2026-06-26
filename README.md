@@ -20,7 +20,14 @@
 
 # 🧬 &rlm;OptiLife - מרחב בריאות אישי ומאמן &rlm;AI
 
-**קישור לפרויקט החי ב-&rlm;Vercel:** <a href="https://optilife-psi.vercel.app">&rlm;optilife-psi.vercel.app</a>
+**🔗 קישור לפרויקט החי ב-&rlm;Vercel:** <a href="https://optilife-psi.vercel.app">&rlm;optilife-psi.vercel.app</a>
+<br>
+*(האתר זמין וחי, והזרימה המרכזית עובדת בצורה מלאה מהקישור ללא צורך בהרצה מקומית. אין צורך במשתמש דמו - פשוט התחברו בלחיצה אחת עם חשבון ה-Google שלכם לחוויה מלאה!)*
+
+<div align="center">
+  <!-- דביר, תחליף את הקישור למטה בצילום מסך אמיתי של האתר או ב-ERD -->
+  <img src="https://via.placeholder.com/800x450.png?text=OptiLife+Screenshot+Here" alt="OptiLife Screenshot" width="800" />
+</div>
 
 ## 📝 סקירה כללית
 <strong>&rlm;OptiLife</strong> היא פלטפורמה רפואית-תזונתית אישית מבוססת בינה מלאכותית (&rlm;AI) המאפשרת למשתמשים להעלות צילומי בדיקות מעבדה (בדיקות דם), לנתח אותם באופן מיידי, לעקוב אחר מגמות המדדים שלהם לאורך זמן, ולקבל <strong>תוכניות תזונה וכושר מותאמות אישית לחלוטין</strong> במטרה לשפר מדדים קליניים.

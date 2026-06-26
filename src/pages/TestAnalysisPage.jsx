@@ -260,27 +260,10 @@ export default function TestAnalysisPage() {
     setError(null);
     setPendingResult(null);
 
-    // 1. Create a pending record immediately
+    // Bug Fix: We no longer create a "processing" pending record prematurely. 
+    // This prevents duplication and stuck records if Supabase RLS blocks updates.
+    // The record will be inserted ONLY once when the AI successfully returns the data.
     let newPendingTestId = null;
-    try {
-      const { data, error } = await supabase
-        .from('medical_tests')
-        .insert([{
-          user_id: session.user.id,
-          test_name: selectedFile ? selectedFile.name : 'בדיקת מעבדה מחשבת...',
-          test_date: testDate,
-          status: 'processing'
-        }])
-        .select()
-        .single();
-      
-      if (!error && data) {
-        newPendingTestId = data.id;
-        setPendingTestId(data.id);
-      }
-    } catch (e) {
-      console.warn('Failed to create pending test', e);
-    }
 
 
     try {

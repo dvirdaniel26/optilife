@@ -399,7 +399,7 @@ vercel dev
   <br><br>
   
   <img src="screenshots/stripe-checkout.png" alt="תשלום עם Stripe" width="800" />
-  <p><em>סליקת תשלומים. <strong>פונקציונליות:</strong> אינטגרציה מלאה ומאובטחת למערכת Stripe Checkout המאפשרת למשתמש להזין פרטי אשראי ולשלם בבטחה ובקלות על המנוי שבחר.</em></p>
+  <p><em>סליקת תשלומים. <strong>פונקציונליות:</strong> אינטגרציה מלאה ומאובטחת למערכת Stripe Checkout המאפשרת למשתמש להזין פרטי אשראי ולשלם בבטחה על המנוי שבחר. <br> 💡 <strong>הערה:</strong> המערכת מוגדרת בסביבת טסט (Test Mode). כדי להתנסות בסליקה, יש להשתמש ב<a href="https://docs.stripe.com/terminal/references/testing" target="_blank">כרטיסי האשראי לבדיקה של Stripe</a>.</em></p>
 
   <br><br>
   

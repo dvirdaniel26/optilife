@@ -355,6 +355,26 @@ vercel dev
   
   <img src="screenshots/support.png" alt="עזרה ותמיכה" width="800" />
   <p><em>מודל עזרה, תמיכה ושאלות נפוצות (FAQ) נגיש למשתמש</em></p>
+
+  <br><br>
+  
+  <img src="screenshots/profile-details.png" alt="פרטים אישיים" width="800" />
+  <p><em>מסך ניהול הפרופיל - עדכון פרטים אישיים</em></p>
+
+  <br><br>
+  
+  <img src="screenshots/profile-metrics.png" alt="מדדי גוף ומטרות" width="800" />
+  <p><em>מסך ניהול הפרופיל - הזנת נתונים פיזיולוגיים, חישוב BMI וקביעת מטרות בריאות</em></p>
+
+  <br><br>
+  
+  <img src="screenshots/profile-security.png" alt="אבטחה וניהול חשבון" width="800" />
+  <p><em>הגדרות אבטחה מתקדמות, אימות דו-שלבי (MFA) וניהול חשבון ה-Google</em></p>
+
+  <br><br>
+  
+  <img src="screenshots/pricing.png" alt="שדרוג מנוי" width="800" />
+  <p><em>מסך תמחור ושדרוג מנויים (Pricing) לפתיחת הגישה למאמן ה-AI</em></p>
 </div>
 
 <div align="right" dir="rtl">

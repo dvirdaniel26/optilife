@@ -17,6 +17,7 @@ export default function ActionPlanPage() {
 
   const [loading, setLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [latestTest, setLatestTest] = useState(null);       // most recent analyzed test (for generating new plan)
   const [labResults, setLabResults] = useState([]);
   const [allPlans, setAllPlans] = useState([]);             // ALL action plans ever created
@@ -474,10 +475,10 @@ export default function ActionPlanPage() {
 
   return (
     <main className="md:pr-72 pt-24 min-h-screen bg-background print:pr-0 print:pt-4" dir="rtl">
-      <div className="p-4 sm:p-6 md:p-8 max-w-5xl mx-auto print:max-w-full print:p-0 space-y-5">
+      <div className="p-4 sm:p-6 md:p-8 max-w-5xl mx-auto space-y-6" id="pdf-content-container">
 
         {/* ── Header ── */}
-        <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4 mb-8 border-b border-slate-100 pb-4">
+        <div className={`flex-col sm:flex-row justify-between sm:items-end gap-4 mb-8 border-b border-slate-100 pb-4 ${isGeneratingPdf ? 'hidden' : 'flex'}`}>
           <div>
             <div className="flex items-center gap-2 mb-2">
               {allPlans.length > 1 && (
@@ -503,25 +504,61 @@ export default function ActionPlanPage() {
             </button>
             <button 
               onClick={async () => {
-                const shareData = {
-                  title: 'תוכנית הבריאות שלי ב-OptiLife',
-                  text: 'הנה תוכנית התזונה והאימונים המותאמת אישית שלי מ-OptiLife!',
-                  url: window.location.href,
-                };
-                if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
-                  try {
+                try {
+                  setIsGeneratingPdf(true);
+                  // Give React a moment to render the hidden tabs
+                  await new Promise(resolve => setTimeout(resolve, 100));
+                  
+                  const element = document.getElementById('pdf-content-container');
+                  if (!element) return;
+                  
+                  // Dynamically import html2pdf
+                  const html2pdf = (await import('html2pdf.js')).default;
+                  
+                  const opt = {
+                    margin:       [10, 10, 10, 10],
+                    filename:     'OptiLife-Plan.pdf',
+                    image:        { type: 'jpeg', quality: 0.98 },
+                    html2canvas:  { scale: 2, useCORS: true, logging: false },
+                    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                  };
+                  
+                  // Generate PDF as Blob
+                  const pdfBlob = await html2pdf().set(opt).from(element).outputPdf('blob');
+                  const file = new File([pdfBlob], "OptiLife-Plan.pdf", { type: "application/pdf" });
+                  
+                  setIsGeneratingPdf(false);
+                  
+                  const shareData = {
+                    title: 'תוכנית הבריאות שלי ב-OptiLife',
+                    text: 'הנה תוכנית התזונה והאימונים המותאמת אישית שלי מ-OptiLife!',
+                    files: [file]
+                  };
+                  
+                  if (navigator.canShare && navigator.canShare(shareData)) {
                     await navigator.share(shareData);
-                  } catch (e) {
-                    console.error('Error sharing', e);
+                  } else {
+                    // Fallback to direct download if sharing files is not supported
+                    const url = URL.createObjectURL(pdfBlob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'OptiLife-Plan.pdf';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    addNotification('הקובץ הורד בהצלחה (השיתוף אינו נתמך בדפדפן זה)', 'success');
                   }
-                } else {
-                  const text = encodeURIComponent(shareData.text + '\n' + shareData.url);
-                  window.open(`https://wa.me/?text=${text}`, '_blank');
+                } catch (e) {
+                  console.error('Error sharing PDF', e);
+                  setIsGeneratingPdf(false);
+                  addNotification('אירעה שגיאה ביצירת ה-PDF לשיתוף', 'error');
                 }
               }}
               className="flex items-center gap-1.5 text-emerald-600 hover:text-emerald-700 border border-emerald-200 hover:border-emerald-300 bg-emerald-50 hover:bg-emerald-100 font-semibold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer"
+              disabled={isGeneratingPdf}
             >
-              <Share2 className="w-4 h-4" /> שתף
+              {isGeneratingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />} {isGeneratingPdf ? 'מכין...' : 'שתף'}
             </button>
             {!latestTestHasPlan && isAllowedToGenerate && (
               <button onClick={handleCreatePlan} className="flex items-center gap-1.5 bg-accent-action text-primary font-bold text-xs px-4 py-2 rounded-xl shadow hover:shadow-md transition-all hover:scale-105 active:scale-95 border-0 cursor-pointer">
@@ -598,7 +635,7 @@ export default function ActionPlanPage() {
         </div>
 
         {/* ── Tabs ── */}
-        <div className="flex gap-1 bg-slate-100/70 p-1 rounded-2xl w-full sm:w-fit print:hidden">
+        <div className={`flex gap-1 bg-slate-100/70 p-1 rounded-2xl w-full sm:w-fit print:hidden ${isGeneratingPdf ? 'hidden' : ''}`}>
           <button
             onClick={() => setActiveTab('nutrition')}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all cursor-pointer border-0
@@ -616,7 +653,7 @@ export default function ActionPlanPage() {
         </div>
 
         {/* ── Print header ── */}
-        <div className="hidden print:flex justify-between items-end border-b-2 border-primary pb-6 mb-8 text-right" dir="rtl">
+        <div className={`justify-between items-end border-b-2 border-primary pb-6 mb-8 text-right ${isGeneratingPdf ? 'flex' : 'hidden print:flex'}`} dir="rtl">
           <div>
             <h1 className="text-3xl font-black text-primary">OptiLife</h1>
             <p className="text-xs text-secondary font-bold tracking-widest">PERSONAL WELLNESS PLAN</p>
@@ -628,8 +665,8 @@ export default function ActionPlanPage() {
         </div>
 
         {/* ── Nutrition Tab ── */}
-        {(activeTab === 'nutrition' || true) && (
-          <div className={activeTab === 'nutrition' ? 'space-y-5 print:block' : 'hidden print:block'}>
+        {(activeTab === 'nutrition' || isGeneratingPdf) && (
+          <div className={activeTab === 'nutrition' || isGeneratingPdf ? 'space-y-5 print:block' : 'hidden print:block'}>
             {/* General recs */}
             <div className="bg-white rounded-3xl p-5 md:p-6 custom-shadow border border-slate-100">
               <h3 className="font-heading text-lg font-bold text-primary mb-3 flex items-center gap-2">
@@ -673,8 +710,8 @@ export default function ActionPlanPage() {
         )}
 
         {/* ── Fitness Tab ── */}
-        {(activeTab === 'fitness' || true) && (
-          <div className={activeTab === 'fitness' ? 'space-y-5 print:block' : 'hidden print:block'}>
+        {(activeTab === 'fitness' || isGeneratingPdf) && (
+          <div className={activeTab === 'fitness' || isGeneratingPdf ? 'space-y-5 print:block' : 'hidden print:block'}>
             {/* General recs */}
             <div className="bg-white rounded-3xl p-5 md:p-6 custom-shadow border border-slate-100">
               <h3 className="font-heading text-lg font-bold text-secondary mb-3 flex items-center gap-2">

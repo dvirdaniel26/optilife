@@ -494,12 +494,12 @@ export default function AnalysisResultsPage() {
       {selectedMarker && (() => {
         const { loading: infoLoading, info, error } = markerInfoState;
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fadeIn" dir="rtl" onClick={closeMarkerModal}>
+          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/50 backdrop-blur-sm animate-fadeIn" dir="rtl" onClick={closeMarkerModal}>
             <div 
-              className="bg-white w-full max-w-lg max-h-[90vh] flex flex-col rounded-3xl custom-shadow overflow-hidden transform transition-all border border-slate-100"
+              className="bg-white w-full sm:max-w-lg max-h-[85vh] sm:max-h-[90vh] flex flex-col rounded-t-3xl sm:rounded-3xl custom-shadow overflow-hidden transform transition-all border-t border-slate-100 sm:border"
               onClick={e => e.stopPropagation()}
             >
-              <div className="p-6 border-b border-slate-100 flex justify-between items-start bg-slate-50/50 shrink-0">
+              <div className="p-4 sm:p-6 border-b border-slate-100 flex justify-between items-start bg-slate-50/50 shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-secondary/10 text-secondary rounded-xl flex items-center justify-center shrink-0">
                     <span className="material-symbols-outlined">science</span>

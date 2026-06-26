@@ -18,6 +18,7 @@ export default function ActionPlanPage() {
   const [loading, setLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [readyPdfFile, setReadyPdfFile] = useState(null);
   const [latestTest, setLatestTest] = useState(null);       // most recent analyzed test (for generating new plan)
   const [labResults, setLabResults] = useState([]);
   const [allPlans, setAllPlans] = useState([]);             // ALL action plans ever created
@@ -132,6 +133,9 @@ export default function ActionPlanPage() {
           });
         
         setAllPlans(validPlans);
+
+        // Reset any prepared PDF if data changes
+        setReadyPdfFile(null);
 
         // Default: show the requested plan, or the most recent plan
         if (validPlans.length > 0) {
@@ -585,92 +589,35 @@ export default function ActionPlanPage() {
             <button onClick={() => window.print()} className="flex items-center gap-1.5 text-on-surface-variant hover:text-primary border border-slate-200 hover:border-slate-300 bg-white font-semibold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer">
               <Printer className="w-4 h-4" /> הדפס
             </button>
-            <button 
-              onClick={async () => {
-                try {
-                  setIsGeneratingPdf(true);
-                  // Give React a moment to render the hidden tabs
-                  await new Promise(resolve => setTimeout(resolve, 100));
-                  
-                  const element = document.getElementById('pdf-template-container');
-                  element.style.display = 'block'; // Ensure it's rendered for capture
-                  if (!element) return;
-                  
-                  // Dynamically import html-to-image and jsPDF
-                  const htmlToImage = await import('html-to-image');
-                  const { jsPDF } = await import('jspdf');
-                  
-                  const dataUrl = await htmlToImage.toPng(element, { quality: 1.0, pixelRatio: 2 });
-                  
-                  const pdf = new jsPDF({
-                    orientation: 'portrait',
-                    unit: 'mm',
-                    format: 'a4'
-                  });
-                  
-                  const pdfWidth = pdf.internal.pageSize.getWidth();
-                  const pdfHeight = pdf.internal.pageSize.getHeight();
-                  const margin = 10;
-                  let currentY = margin;
-
-                  // Get all blocks
-                  const blocks = Array.from(element.querySelectorAll('.pdf-export-block'));
-                  
-                  // If no blocks are found (fallback), just do the old single image logic
-                  if (blocks.length === 0) {
-                    const imgProps = pdf.getImageProperties(dataUrl);
-                    const imgHeightInMm = (imgProps.height * pdfWidth) / imgProps.width;
-                    let position = 0;
-                    let heightLeft = imgHeightInMm;
-                    pdf.addImage(dataUrl, 'PNG', 0, position, pdfWidth, imgHeightInMm);
-                    heightLeft -= pdfHeight;
-                    while (heightLeft > 0) {
-                      position -= pdfHeight;
-                      pdf.addPage();
-                      pdf.addImage(dataUrl, 'PNG', 0, position, pdfWidth, imgHeightInMm);
-                      heightLeft -= pdfHeight;
-                    }
-                  } else {
-                    for (let i = 0; i < blocks.length; i++) {
-                      const block = blocks[i];
-                      if (block.offsetHeight === 0) continue;
-                      
-                      const blockDataUrl = await htmlToImage.toPng(block, { 
-                        quality: 1.0, 
-                        pixelRatio: 2,
-                        backgroundColor: '#f8fafc' // slate-50
-                      });
-                      
-                      const imgProps = pdf.getImageProperties(blockDataUrl);
-                      const imgHeightInMm = (imgProps.height * (pdfWidth - 2 * margin)) / imgProps.width;
-                      
-                      if (currentY + imgHeightInMm > pdfHeight - margin) {
-                        pdf.addPage();
-                        currentY = margin;
-                      }
-                      
-                      pdf.addImage(blockDataUrl, 'PNG', margin, currentY, pdfWidth - 2 * margin, imgHeightInMm);
-                      currentY += imgHeightInMm + 4; // 4mm spacing
-                    }
-                  }
-                  
-                  const pdfBlob = pdf.output('blob');
-                  const file = new File([pdfBlob], "OptiLife-Plan.pdf", { type: "application/pdf" });
-                  element.style.display = 'none';
-                  
-                  setIsGeneratingPdf(false);
-                  
+            {readyPdfFile ? (
+              <button 
+                onClick={async () => {
                   const shareData = {
                     title: 'תוכנית הבריאות שלי ב-OptiLife',
                     text: 'הנה תוכנית התזונה והאימונים המותאמת אישית שלי מ-OptiLife!',
-                    files: [file]
+                    files: [readyPdfFile]
                   };
-                  
                   if (navigator.canShare && navigator.canShare(shareData)) {
-                    await navigator.share(shareData);
+                    try {
+                      await navigator.share(shareData);
+                    } catch (e) {
+                      console.error('Error sharing PDF', e);
+                      if (e.name === 'NotAllowedError') {
+                        // Fallback to direct download if share is blocked
+                        const url = URL.createObjectURL(readyPdfFile);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'OptiLife-Plan.pdf';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                        addNotification({ type: 'success', title: 'הצלחה', message: 'הקובץ נשמר במכשירך בהצלחה' });
+                      }
+                    }
                   } else {
-                    // Fallback to direct download if sharing files is not supported
-                    const url = URL.createObjectURL(pdfBlob);
+                    // Direct download
+                    const url = URL.createObjectURL(readyPdfFile);
                     const a = document.createElement('a');
                     a.href = url;
                     a.download = 'OptiLife-Plan.pdf';
@@ -678,21 +625,104 @@ export default function ActionPlanPage() {
                     a.click();
                     document.body.removeChild(a);
                     URL.revokeObjectURL(url);
-                    addNotification({ type: 'success', title: 'הצלחה', message: 'הקובץ הורד בהצלחה (השיתוף אינו נתמך בדפדפן זה)' });
+                    addNotification({ type: 'success', title: 'הצלחה', message: 'הקובץ הורד בהצלחה' });
                   }
-                } catch (e) {
-                  console.error('Error sharing PDF', e);
-                  setIsGeneratingPdf(false);
-                  addNotification({ type: 'error', title: 'שגיאה', message: 'אירעה שגיאה ביצירת ה-PDF לשיתוף' });
-                  const el = document.getElementById('pdf-template-container');
-                  if (el) el.style.display = 'none';
-                }
-              }}
-              className="flex items-center gap-1.5 text-emerald-600 hover:text-emerald-700 border border-emerald-200 hover:border-emerald-300 bg-emerald-50 hover:bg-emerald-100 font-semibold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer"
-              disabled={isGeneratingPdf}
-            >
-              {isGeneratingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />} {isGeneratingPdf ? 'מכין...' : 'שתף'}
-            </button>
+                }}
+                className="flex items-center gap-1.5 text-white bg-emerald-600 hover:bg-emerald-700 shadow font-semibold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer"
+              >
+                <Share2 className="w-4 h-4" /> הקובץ מוכן, לחץ לשיתוף
+              </button>
+            ) : (
+              <button 
+                onClick={async () => {
+                  try {
+                    setIsGeneratingPdf(true);
+                    // Give React a moment to render the hidden tabs
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                    const element = document.getElementById('pdf-template-container');
+                    element.style.display = 'block'; // Ensure it's rendered for capture
+                    if (!element) return;
+                    
+                    // Dynamically import html-to-image and jsPDF
+                    const htmlToImage = await import('html-to-image');
+                    const { jsPDF } = await import('jspdf');
+                    
+                    const dataUrl = await htmlToImage.toPng(element, { quality: 1.0, pixelRatio: 2 });
+                    
+                    const pdf = new jsPDF({
+                      orientation: 'portrait',
+                      unit: 'mm',
+                      format: 'a4'
+                    });
+                    
+                    const pdfWidth = pdf.internal.pageSize.getWidth();
+                    const pdfHeight = pdf.internal.pageSize.getHeight();
+                    const margin = 10;
+                    let currentY = margin;
+
+                    // Get all blocks
+                    const blocks = Array.from(element.querySelectorAll('.pdf-export-block'));
+                    
+                    // If no blocks are found (fallback), just do the old single image logic
+                    if (blocks.length === 0) {
+                      const imgProps = pdf.getImageProperties(dataUrl);
+                      const imgHeightInMm = (imgProps.height * pdfWidth) / imgProps.width;
+                      let position = 0;
+                      let heightLeft = imgHeightInMm;
+                      pdf.addImage(dataUrl, 'PNG', 0, position, pdfWidth, imgHeightInMm);
+                      heightLeft -= pdfHeight;
+                      while (heightLeft > 0) {
+                        position -= pdfHeight;
+                        pdf.addPage();
+                        pdf.addImage(dataUrl, 'PNG', 0, position, pdfWidth, imgHeightInMm);
+                        heightLeft -= pdfHeight;
+                      }
+                    } else {
+                      for (let i = 0; i < blocks.length; i++) {
+                        const block = blocks[i];
+                        if (block.offsetHeight === 0) continue;
+                        
+                        const blockDataUrl = await htmlToImage.toPng(block, { 
+                          quality: 1.0, 
+                          pixelRatio: 2,
+                          backgroundColor: '#f8fafc' // slate-50
+                        });
+                        
+                        const imgProps = pdf.getImageProperties(blockDataUrl);
+                        const imgHeightInMm = (imgProps.height * (pdfWidth - 2 * margin)) / imgProps.width;
+                        
+                        if (currentY + imgHeightInMm > pdfHeight - margin) {
+                          pdf.addPage();
+                          currentY = margin;
+                        }
+                        
+                        pdf.addImage(blockDataUrl, 'PNG', margin, currentY, pdfWidth - 2 * margin, imgHeightInMm);
+                        currentY += imgHeightInMm + 4; // 4mm spacing
+                      }
+                    }
+                    
+                    const pdfBlob = pdf.output('blob');
+                    const file = new File([pdfBlob], "OptiLife-Plan.pdf", { type: "application/pdf" });
+                    element.style.display = 'none';
+                    
+                    setReadyPdfFile(file);
+                    setIsGeneratingPdf(false);
+                    
+                  } catch (e) {
+                    console.error('Error sharing PDF', e);
+                    setIsGeneratingPdf(false);
+                    addNotification({ type: 'error', title: 'שגיאה', message: 'אירעה שגיאה בהכנת ה-PDF' });
+                    const el = document.getElementById('pdf-template-container');
+                    if (el) el.style.display = 'none';
+                  }
+                }}
+                className="flex items-center gap-1.5 text-emerald-600 hover:text-emerald-700 border border-emerald-200 hover:border-emerald-300 bg-emerald-50 hover:bg-emerald-100 font-semibold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer"
+                disabled={isGeneratingPdf}
+              >
+                {isGeneratingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />} {isGeneratingPdf ? 'מכין שיתוף...' : 'שתף'}
+              </button>
+            )}
             {!latestTestHasPlan && isAllowedToGenerate && (
               <button onClick={handleCreatePlan} className="flex items-center gap-1.5 bg-accent-action text-primary font-bold text-xs px-4 py-2 rounded-xl shadow hover:shadow-md transition-all hover:scale-105 active:scale-95 border-0 cursor-pointer">
                 <Sparkles className="w-4 h-4" /> צור תוכנית לבדיקה החדשה

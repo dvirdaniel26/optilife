@@ -406,19 +406,19 @@ vercel dev
 </div>
 
 <div align="center">
-  <img src="screenshots/mobile-dashboard.png" alt="לוח בקרה בנייד" width="250" />
+  <img src="screenshots/mobile-dashboard.jpeg" alt="לוח בקרה בנייד" width="250" />
   &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="screenshots/mobile-menu.png" alt="תפריט ניווט בנייד" width="250" />
+  <img src="screenshots/mobile-menu.jpeg" alt="תפריט ניווט בנייד" width="250" />
   
   <br><br>
   
-  <img src="screenshots/mobile-notifications.png" alt="התראות בנייד" width="250" />
+  <img src="screenshots/mobile-notifications.jpeg" alt="התראות בנייד" width="250" />
   &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="screenshots/mobile-pricing.png" alt="שדרוג מנוי בנייד" width="250" />
+  <img src="screenshots/mobile-pricing.jpeg" alt="שדרוג מנוי בנייד" width="250" />
   
   <br><br>
   
-  <img src="screenshots/mobile-ai-coach.png" alt="מאמן AI בנייד" width="250" />
+  <img src="screenshots/mobile-ai-coach.jpeg" alt="מאמן AI בנייד" width="250" />
 </div>
 
 <div align="right" dir="rtl">

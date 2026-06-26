@@ -600,7 +600,7 @@ export default function ActionPlanPage() {
                   const htmlToImage = await import('html-to-image');
                   const { jsPDF } = await import('jspdf');
                   
-                  const dataUrl = await htmlToImage.toPng(element, { quality: 0.95, pixelRatio: 2 });
+                  const dataUrl = await htmlToImage.toPng(element, { quality: 1.0, pixelRatio: 2 });
                   
                   const pdf = new jsPDF({
                     orientation: 'portrait',
@@ -610,20 +610,48 @@ export default function ActionPlanPage() {
                   
                   const pdfWidth = pdf.internal.pageSize.getWidth();
                   const pdfHeight = pdf.internal.pageSize.getHeight();
-                  const imgProps = pdf.getImageProperties(dataUrl);
-                  const imgHeightInMm = (imgProps.height * pdfWidth) / imgProps.width;
+                  const margin = 10;
+                  let currentY = margin;
+
+                  // Get all blocks
+                  const blocks = Array.from(element.querySelectorAll('.pdf-export-block'));
                   
-                  let position = 0;
-                  let heightLeft = imgHeightInMm;
-                  
-                  pdf.addImage(dataUrl, 'PNG', 0, position, pdfWidth, imgHeightInMm);
-                  heightLeft -= pdfHeight;
-                  
-                  while (heightLeft > 0) {
-                    position -= pdfHeight;
-                    pdf.addPage();
+                  // If no blocks are found (fallback), just do the old single image logic
+                  if (blocks.length === 0) {
+                    const imgProps = pdf.getImageProperties(dataUrl);
+                    const imgHeightInMm = (imgProps.height * pdfWidth) / imgProps.width;
+                    let position = 0;
+                    let heightLeft = imgHeightInMm;
                     pdf.addImage(dataUrl, 'PNG', 0, position, pdfWidth, imgHeightInMm);
                     heightLeft -= pdfHeight;
+                    while (heightLeft > 0) {
+                      position -= pdfHeight;
+                      pdf.addPage();
+                      pdf.addImage(dataUrl, 'PNG', 0, position, pdfWidth, imgHeightInMm);
+                      heightLeft -= pdfHeight;
+                    }
+                  } else {
+                    for (let i = 0; i < blocks.length; i++) {
+                      const block = blocks[i];
+                      if (block.offsetHeight === 0) continue;
+                      
+                      const blockDataUrl = await htmlToImage.toPng(block, { 
+                        quality: 1.0, 
+                        pixelRatio: 2,
+                        backgroundColor: '#f8fafc' // slate-50
+                      });
+                      
+                      const imgProps = pdf.getImageProperties(blockDataUrl);
+                      const imgHeightInMm = (imgProps.height * (pdfWidth - 2 * margin)) / imgProps.width;
+                      
+                      if (currentY + imgHeightInMm > pdfHeight - margin) {
+                        pdf.addPage();
+                        currentY = margin;
+                      }
+                      
+                      pdf.addImage(blockDataUrl, 'PNG', margin, currentY, pdfWidth - 2 * margin, imgHeightInMm);
+                      currentY += imgHeightInMm + 4; // 4mm spacing
+                    }
                   }
                   
                   const pdfBlob = pdf.output('blob');
@@ -876,77 +904,151 @@ export default function ActionPlanPage() {
         )}
 
 
-        {/* ── HIDDEN PDF TEMPLATE ── */}
+        {/* ── HIDDEN PDF TEMPLATE (USING ACTUAL SITE UI) ── */}
         <div style={{ position: 'absolute', top: 0, right: '-9999px', width: '800px', zIndex: -50, pointerEvents: 'none' }}>
-          <div id="pdf-template-container" className="bg-white text-slate-900 font-sans" dir="rtl" style={{ width: '800px', padding: '40px', display: 'none' }}>
-            <div style={{ borderBottom: '2px solid #10b981', paddingBottom: '20px', marginBottom: '30px' }}>
-              <h1 style={{ fontSize: '32px', fontWeight: 'bold', color: '#10b981', margin: 0 }}>OptiLife</h1>
-              <p style={{ fontSize: '14px', fontWeight: 'bold', color: '#f59e0b', letterSpacing: '1px', margin: '4px 0 0 0' }}>תוכנית בריאות מותאמת אישית</p>
-              <div style={{ marginTop: '20px' }}>
-                <p style={{ fontSize: '18px', margin: 0 }}>עבור: <strong>{firstName} {profile?.last_name || ''}</strong></p>
-                <p style={{ fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' }}>תאריך תוכנית: {selectedPlanMeta?.testDate ? new Date(selectedPlanMeta.testDate).toLocaleDateString('he-IL') : new Date().toLocaleDateString('he-IL')}</p>
+          <div id="pdf-template-container" className="bg-slate-50 text-slate-900 font-sans p-8" dir="rtl" style={{ width: '800px', display: 'block' }}>
+            
+            {/* HEADER */}
+            <div className="pdf-export-block mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <h1 className="text-3xl font-black text-primary">OptiLife</h1>
+                <p className="text-sm font-bold text-secondary tracking-widest uppercase">Personal Wellness Plan</p>
+              </div>
+              <div className="bg-gradient-to-l from-secondary/5 via-white to-primary/5 rounded-3xl p-6 shadow-sm border border-secondary/10 relative overflow-hidden">
+                <div className="absolute top-0 right-0 bottom-0 w-1.5 bg-gradient-to-b from-secondary to-primary" />
+                <h2 className="font-heading text-2xl font-bold text-primary pr-2">תוכנית הבריאות המותאמת שלך</h2>
+                <p className="text-on-surface-variant text-sm mt-1 font-semibold pr-2">
+                  נבנתה עבור {firstName} {profile?.last_name || ''}
+                  <br/>
+                  תאריך: {selectedPlanMeta?.testDate ? new Date(selectedPlanMeta.testDate).toLocaleDateString('he-IL') : new Date().toLocaleDateString('he-IL')}
+                </p>
               </div>
             </div>
-            
-            {/* Nutrition Section */}
-            <h2 style={{ fontSize: '24px', color: '#10b981', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Salad className="w-6 h-6" /> תזונה
-            </h2>
-            <div style={{ backgroundColor: '#f8fafc', padding: '20px', borderRadius: '16px', marginBottom: '24px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#0f172a', margin: '0 0 12px 0' }}>דגשים והמלצות</h3>
-              <p style={{ fontSize: '14px', lineHeight: '1.6', color: '#334155', margin: 0, whiteSpace: 'pre-wrap' }}>{selectedPlan?.nutrition_recommendations}</p>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '40px' }}>
-              {selectedPlan?.diet_plan?.map((item, idx) => (
-                <div key={idx} style={{ border: '1px solid #e2e8f0', padding: '20px', borderRadius: '16px', pageBreakInside: 'avoid' }}>
-                  <h4 style={{ fontSize: '16px', fontWeight: 'bold', color: '#10b981', margin: '0 0 12px 0' }}>{item.meal}</h4>
-                  <ul style={{ padding: 0, margin: '0 0 16px 0', listStyle: 'none' }}>
-                    {item.suggestions?.map((s, sIdx) => (
-                      <li key={sIdx} style={{ fontSize: '14px', color: '#334155', marginBottom: '8px', display: 'flex', gap: '8px' }}>
-                        <span style={{ color: '#f59e0b' }}>✓</span> <span>{s}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  {item.why && (
-                    <div style={{ backgroundColor: '#ecfdf5', padding: '12px', borderRadius: '8px', fontSize: '12px', color: '#047857' }}>
-                      <strong>מדוע זה מומלץ עבורך:</strong><br/>{item.why}
-                    </div>
-                  )}
-                </div>
-              ))}
+
+            {/* NUTRITION HEADER */}
+            <div className="pdf-export-block mb-4 mt-8">
+              <h2 className="font-heading text-2xl font-bold text-primary flex items-center gap-2">
+                <Salad className="w-6 h-6" /> תזונה
+              </h2>
             </div>
 
-            {/* Fitness Section */}
-            <h2 style={{ fontSize: '24px', color: '#f59e0b', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Dumbbell className="w-6 h-6" /> אימונים
-            </h2>
-            <div style={{ backgroundColor: '#f8fafc', padding: '20px', borderRadius: '16px', marginBottom: '24px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#0f172a', margin: '0 0 12px 0' }}>דגשי כושר והשפעה פיזיולוגית</h3>
-              <p style={{ fontSize: '14px', lineHeight: '1.6', color: '#334155', margin: 0, whiteSpace: 'pre-wrap' }}>{selectedPlan?.fitness_recommendations}</p>
+            <div className="pdf-export-block mb-6">
+              <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+                <h3 className="font-heading text-lg font-bold text-primary mb-3 flex items-center gap-2">
+                  <span className="w-8 h-8 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
+                    <Sparkles className="w-4 h-4" />
+                  </span>
+                  דגשים והמלצות
+                </h3>
+                <p className="text-on-surface font-body leading-relaxed text-sm whitespace-pre-wrap">
+                  {selectedPlan?.nutrition_recommendations}
+                </p>
+              </div>
             </div>
-            <div style={{ border: '1px solid #e2e8f0', borderRadius: '16px', overflow: 'hidden', marginBottom: '40px' }}>
-              {selectedPlan?.workout_plan?.map((item, idx) => {
-                const hasWorkout = item.duration !== '0 דקות' && item.duration !== '0' && item.intensity !== 'אין';
-                return (
-                  <div key={idx} style={{ display: 'flex', padding: '16px', borderBottom: '1px solid #e2e8f0', backgroundColor: hasWorkout ? '#fff' : '#f8fafc', pageBreakInside: 'avoid' }}>
-                    <div style={{ width: '120px', flexShrink: 0 }}>
-                      <div style={{ fontWeight: 'bold', color: hasWorkout ? '#f59e0b' : '#94a3b8', fontSize: '14px' }}>{item.day}</div>
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '14px', marginBottom: '4px' }}>{item.activity}</div>
-                      <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px' }}>{hasWorkout ? `${item.duration} | ${item.intensity}` : 'מנוחה'}</div>
-                      {hasWorkout && item.exercises && item.exercises.length > 0 && (
-                        <ul style={{ padding: 0, margin: 0, listStyle: 'none' }}>
-                          {item.exercises.map((ex, exIdx) => (
-                            <li key={exIdx} style={{ fontSize: '12px', color: '#475569', marginBottom: '4px' }}>• {ex}</li>
-                          ))}
-                        </ul>
+
+            {/* NUTRITION CARDS IN PAIRS */}
+            {Array.from({ length: Math.ceil((selectedPlan?.diet_plan?.length || 0) / 2) }).map((_, rowIndex) => {
+              const pair = selectedPlan?.diet_plan?.slice(rowIndex * 2, rowIndex * 2 + 2) || [];
+              return (
+                <div key={rowIndex} className="pdf-export-block flex gap-4 mb-4">
+                  {pair.map((item, idx) => (
+                    <div key={idx} className="flex-1 bg-white rounded-2xl p-5 shadow-sm border border-slate-100 relative overflow-hidden">
+                      <div className="absolute top-0 right-0 bottom-0 w-1 bg-primary/25" />
+                      <h4 className="font-heading text-base font-bold text-primary mb-3 flex items-center gap-2 pr-2">
+                        <span className="material-symbols-outlined text-primary text-lg">restaurant</span>
+                        {item.meal}
+                      </h4>
+                      <ul className="space-y-1.5 mb-4 pr-1">
+                        {item.suggestions?.map((s, sIdx) => (
+                          <li key={sIdx} className="flex items-start gap-2 text-sm text-on-surface">
+                            <Check className="w-4 h-4 text-secondary shrink-0 mt-0.5" />
+                            <span>{s}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      {item.why && (
+                        <div className="bg-primary/5 rounded-xl p-3 text-xs text-primary leading-relaxed">
+                          <span className="font-bold block mb-0.5">מדוע זה מומלץ עבורך:</span>
+                          {item.why}
+                        </div>
                       )}
                     </div>
-                  </div>
-                )
-              })}
+                  ))}
+                  {/* Empty div if odd number of items to keep sizing consistent */}
+                  {pair.length === 1 && <div className="flex-1"></div>}
+                </div>
+              );
+            })}
+
+            {/* FITNESS HEADER */}
+            <div className="pdf-export-block mb-4 mt-8">
+              <h2 className="font-heading text-2xl font-bold text-secondary flex items-center gap-2">
+                <Dumbbell className="w-6 h-6" /> אימונים
+              </h2>
             </div>
+
+            <div className="pdf-export-block mb-6">
+              <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+                <h3 className="font-heading text-lg font-bold text-secondary mb-3 flex items-center gap-2">
+                  <span className="w-8 h-8 bg-secondary/10 text-secondary rounded-xl flex items-center justify-center">
+                    <Flame className="w-4 h-4" />
+                  </span>
+                  דגשי כושר והשפעה פיזיולוגית
+                </h3>
+                <p className="text-on-surface font-body leading-relaxed text-sm whitespace-pre-wrap">
+                  {selectedPlan?.fitness_recommendations}
+                </p>
+              </div>
+            </div>
+
+            {/* FITNESS CARDS */}
+            {selectedPlan?.workout_plan?.map((item, idx) => {
+              const hasWorkout = item.duration !== '0 דקות' && item.duration !== '0' && item.intensity !== 'אין';
+              return (
+                <div key={idx} className="pdf-export-block mb-4">
+                  <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex flex-col sm:flex-row gap-4">
+                    <div className="flex items-center gap-3 sm:w-44 shrink-0">
+                      <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold
+                        ${hasWorkout ? 'bg-secondary/10 text-secondary' : 'bg-slate-100 text-slate-400'}`}>
+                        {item.day}
+                      </div>
+                      <div>
+                        <p className="font-bold text-primary text-sm">{item.activity}</p>
+                        <p className="text-xs text-on-surface-variant font-medium mt-0.5">
+                          {hasWorkout ? `${item.duration} | ${item.intensity}` : 'מנוחה'}
+                        </p>
+                      </div>
+                    </div>
+                    {hasWorkout && item.exercises && item.exercises.length > 0 && (
+                      <div className="sm:border-r border-slate-100 sm:pr-4 flex-1">
+                        <ul className="space-y-1.5">
+                          {item.exercises.map((ex, exIdx) => (
+                            <li key={exIdx} className="text-sm text-on-surface flex items-start gap-2">
+                              <span className="w-1.5 h-1.5 rounded-full bg-secondary/40 shrink-0 mt-1.5"></span>
+                              <span>{ex}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* DISCLAIMER */}
+            <div className="pdf-export-block mt-8">
+              <div className="bg-amber-50/70 border border-amber-200/50 rounded-2xl p-4 flex items-start gap-3 text-right">
+                <span className="material-symbols-outlined text-amber-600 text-xl shrink-0 mt-0.5" style={{ fontVariationSettings: "'wght' 500" }}>warning</span>
+                <div>
+                  <h4 className="font-bold text-amber-900 text-xs mb-1">הבהרה רפואית חשובה:</h4>
+                  <p className="text-amber-800 text-[11px] leading-relaxed">
+                    תוכנית הפעולה לעיל הופקה באופן אוטומטי על ידי מודל בינה מלאכותית (Gemini AI). מידע זה נועד להעשרה בלבד ואינו מחליף ייעוץ רפואי, אבחנה או טיפול מקצועי. חובה להתייעץ עם רופא או תזונאי מוסמך לפני כל שינוי תזונתי או גופני.
+                  </p>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
 \n        {/* ── Disclaimer ── */}

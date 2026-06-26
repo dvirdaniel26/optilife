@@ -375,6 +375,16 @@ vercel dev
   
   <img src="screenshots/pricing.png" alt="שדרוג מנוי" width="800" />
   <p><em>מסך תמחור ושדרוג מנויים (Pricing) לפתיחת הגישה למאמן ה-AI</em></p>
+
+  <br><br>
+  
+  <img src="screenshots/ai-coach-locked.png" alt="מאמן AI אישי - פרימיום" width="800" />
+  <p><em>מסך נעול המזמין לשדרוג למסלול ה-AI המתקדם (Upsell)</em></p>
+
+  <br><br>
+  
+  <img src="screenshots/stripe-checkout.png" alt="תשלום עם Stripe" width="800" />
+  <p><em>סליקת תשלומים ומנויים מאובטחת באמצעות אינטגרציה מלאה עם Stripe Checkout</em></p>
 </div>
 
 <div align="right" dir="rtl">

@@ -213,8 +213,91 @@ export default function ActionPlanPage() {
         <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center">
           <Loader2 className="w-12 h-12 text-secondary animate-spin" />
           <p className="text-on-surface-variant font-semibold">טוען את תוכנית הבריאות שלך...</p>
+        {/* ── HIDDEN PDF TEMPLATE ── */}
+        <div style={{ position: 'absolute', top: 0, right: '-9999px', width: '800px', zIndex: -50, pointerEvents: 'none' }}>
+          <div id="pdf-template-container" className="bg-white text-slate-900 font-sans" dir="rtl" style={{ width: '800px', padding: '40px', display: 'none' }}>
+            <div style={{ borderBottom: '2px solid #10b981', paddingBottom: '20px', marginBottom: '30px' }}>
+              <h1 style={{ fontSize: '32px', fontWeight: 'bold', color: '#10b981', margin: 0 }}>OptiLife</h1>
+              <p style={{ fontSize: '14px', fontWeight: 'bold', color: '#f59e0b', letterSpacing: '1px', margin: '4px 0 0 0' }}>תוכנית בריאות מותאמת אישית</p>
+              <div style={{ marginTop: '20px' }}>
+                <p style={{ fontSize: '18px', margin: 0 }}>עבור: <strong>{firstName} {profile?.last_name || ''}</strong></p>
+                <p style={{ fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' }}>תאריך תוכנית: {selectedPlanMeta?.testDate ? new Date(selectedPlanMeta.testDate).toLocaleDateString('he-IL') : new Date().toLocaleDateString('he-IL')}</p>
+              </div>
+            </div>
+            
+            {/* Nutrition Section */}
+            <h2 style={{ fontSize: '24px', color: '#10b981', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Salad className="w-6 h-6" /> תזונה
+            </h2>
+            <div style={{ backgroundColor: '#f8fafc', padding: '20px', borderRadius: '16px', marginBottom: '24px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#0f172a', margin: '0 0 12px 0' }}>דגשים והמלצות</h3>
+              <p style={{ fontSize: '14px', lineHeight: '1.6', color: '#334155', margin: 0, whiteSpace: 'pre-wrap' }}>{selectedPlan?.nutrition_recommendations}</p>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '40px' }}>
+              {selectedPlan?.diet_plan?.map((item, idx) => (
+                <div key={idx} style={{ border: '1px solid #e2e8f0', padding: '20px', borderRadius: '16px', pageBreakInside: 'avoid' }}>
+                  <h4 style={{ fontSize: '16px', fontWeight: 'bold', color: '#10b981', margin: '0 0 12px 0' }}>{item.meal}</h4>
+                  <ul style={{ padding: 0, margin: '0 0 16px 0', listStyle: 'none' }}>
+                    {item.suggestions?.map((s, sIdx) => (
+                      <li key={sIdx} style={{ fontSize: '14px', color: '#334155', marginBottom: '8px', display: 'flex', gap: '8px' }}>
+                        <span style={{ color: '#f59e0b' }}>✓</span> <span>{s}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {item.why && (
+                    <div style={{ backgroundColor: '#ecfdf5', padding: '12px', borderRadius: '8px', fontSize: '12px', color: '#047857' }}>
+                      <strong>מדוע זה מומלץ עבורך:</strong><br/>{item.why}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Fitness Section */}
+            <h2 style={{ fontSize: '24px', color: '#f59e0b', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Dumbbell className="w-6 h-6" /> אימונים
+            </h2>
+            <div style={{ backgroundColor: '#f8fafc', padding: '20px', borderRadius: '16px', marginBottom: '24px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#0f172a', margin: '0 0 12px 0' }}>דגשי כושר והשפעה פיזיולוגית</h3>
+              <p style={{ fontSize: '14px', lineHeight: '1.6', color: '#334155', margin: 0, whiteSpace: 'pre-wrap' }}>{selectedPlan?.fitness_recommendations}</p>
+            </div>
+            <div style={{ border: '1px solid #e2e8f0', borderRadius: '16px', overflow: 'hidden', marginBottom: '40px' }}>
+              {selectedPlan?.workout_plan?.map((item, idx) => {
+                const hasWorkout = item.duration !== '0 דקות' && item.duration !== '0' && item.intensity !== 'אין';
+                return (
+                  <div key={idx} style={{ display: 'flex', padding: '16px', borderBottom: '1px solid #e2e8f0', backgroundColor: hasWorkout ? '#fff' : '#f8fafc', pageBreakInside: 'avoid' }}>
+                    <div style={{ width: '120px', flexShrink: 0 }}>
+                      <div style={{ fontWeight: 'bold', color: hasWorkout ? '#f59e0b' : '#94a3b8', fontSize: '14px' }}>{item.day}</div>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 'bold', color: '#0f172a', fontSize: '14px', marginBottom: '4px' }}>{item.activity}</div>
+                      <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px' }}>{hasWorkout ? `${item.duration} | ${item.intensity}` : 'מנוחה'}</div>
+                      {hasWorkout && item.exercises && item.exercises.length > 0 && (
+                        <ul style={{ padding: 0, margin: 0, listStyle: 'none' }}>
+                          {item.exercises.map((ex, exIdx) => (
+                            <li key={exIdx} style={{ fontSize: '12px', color: '#475569', marginBottom: '4px' }}>• {ex}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Disclaimer */}
+            <div style={{ backgroundColor: '#fffbeb', border: '1px solid #fde68a', padding: '16px', borderRadius: '16px', pageBreakInside: 'avoid' }}>
+              <p style={{ fontSize: '12px', color: '#92400e', margin: 0, fontWeight: 'bold' }}>הבהרה רפואית חשובה:</p>
+              <p style={{ fontSize: '11px', color: '#92400e', margin: '4px 0 0 0', lineHeight: '1.5' }}>
+                תוכנית הפעולה לעיל הופקה באופן אוטומטי על ידי מודל בינה מלאכותית (Gemini AI). מידע זה נועד להעשרה בלבד ואינו מחליף ייעוץ רפואי, אבחנה או טיפול מקצועי. חובה להתייעץ עם רופא או תזונאי מוסמך לפני כל שינוי תזונתי או גופני.
+              </p>
+            </div>
+          </div>
         </div>
-      </main>
+
+      </div>
+    </main>
+
     );
   }
 
@@ -478,7 +561,7 @@ export default function ActionPlanPage() {
       <div className="p-4 sm:p-6 md:p-8 max-w-5xl mx-auto space-y-6" id="pdf-content-container">
 
         {/* ── Header ── */}
-        <div className={`flex-col sm:flex-row justify-between sm:items-end gap-4 mb-8 border-b border-slate-100 pb-4 ${isGeneratingPdf ? 'hidden' : 'flex'}`}>
+        <div className={"flex-col sm:flex-row justify-between sm:items-end gap-4 mb-8 border-b border-slate-100 pb-4 flex print:hidden"}>
           <div>
             <div className="flex items-center gap-2 mb-2">
               {allPlans.length > 1 && (
@@ -509,7 +592,8 @@ export default function ActionPlanPage() {
                   // Give React a moment to render the hidden tabs
                   await new Promise(resolve => setTimeout(resolve, 100));
                   
-                  const element = document.getElementById('pdf-content-container');
+                  const element = document.getElementById('pdf-template-container');
+                  element.style.display = 'block'; // Ensure it's rendered for capture
                   if (!element) return;
                   
                   // Dynamically import html-to-image and jsPDF
@@ -544,6 +628,7 @@ export default function ActionPlanPage() {
                   
                   const pdfBlob = pdf.output('blob');
                   const file = new File([pdfBlob], "OptiLife-Plan.pdf", { type: "application/pdf" });
+                  element.style.display = 'none';
                   
                   setIsGeneratingPdf(false);
                   
@@ -571,6 +656,8 @@ export default function ActionPlanPage() {
                   console.error('Error sharing PDF', e);
                   setIsGeneratingPdf(false);
                   addNotification({ type: 'error', title: 'שגיאה', message: 'אירעה שגיאה ביצירת ה-PDF לשיתוף' });
+                  const el = document.getElementById('pdf-template-container');
+                  if (el) el.style.display = 'none';
                 }
               }}
               className="flex items-center gap-1.5 text-emerald-600 hover:text-emerald-700 border border-emerald-200 hover:border-emerald-300 bg-emerald-50 hover:bg-emerald-100 font-semibold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer"
@@ -653,7 +740,7 @@ export default function ActionPlanPage() {
         </div>
 
         {/* ── Tabs ── */}
-        <div className={`flex gap-1 bg-slate-100/70 p-1 rounded-2xl w-full sm:w-fit print:hidden ${isGeneratingPdf ? 'hidden' : ''}`}>
+        <div className={"flex gap-1 bg-slate-100/70 p-1 rounded-2xl w-full sm:w-fit print:hidden"}>
           <button
             onClick={() => setActiveTab('nutrition')}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all cursor-pointer border-0
@@ -683,8 +770,8 @@ export default function ActionPlanPage() {
         </div>
 
         {/* ── Nutrition Tab ── */}
-        {(activeTab === 'nutrition' || isGeneratingPdf) && (
-          <div className={activeTab === 'nutrition' || isGeneratingPdf ? 'space-y-5 print:block' : 'hidden print:block'}>
+        {(activeTab === 'nutrition') && (
+          <div className="space-y-5 print:block">
             {/* General recs */}
             <div className="bg-white rounded-3xl p-5 md:p-6 custom-shadow border border-slate-100">
               <h3 className="font-heading text-lg font-bold text-primary mb-3 flex items-center gap-2">
@@ -728,8 +815,8 @@ export default function ActionPlanPage() {
         )}
 
         {/* ── Fitness Tab ── */}
-        {(activeTab === 'fitness' || isGeneratingPdf) && (
-          <div className={activeTab === 'fitness' || isGeneratingPdf ? 'space-y-5 print:block' : 'hidden print:block'}>
+        {(activeTab === 'fitness') && (
+          <div className="space-y-5 print:block">
             {/* General recs */}
             <div className="bg-white rounded-3xl p-5 md:p-6 custom-shadow border border-slate-100">
               <h3 className="font-heading text-lg font-bold text-secondary mb-3 flex items-center gap-2">

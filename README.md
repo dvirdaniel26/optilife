@@ -379,7 +379,7 @@ vercel dev
   <br><br>
   
   <img src="screenshots/profile-security.png" alt="אבטחה וניהול חשבון" width="800" />
-  <p><em>ניהול פרופיל - אבטחה. <strong>פונקציונליות:</strong> ניהול הגדרות האבטחה של החשבון, הכולל הפעלת אימות דו-שלבי (MFA), שינוי סיסמה וניהול צורת ההתחברות מול ספקי צד-שלישי (כמו Google).</em></p>
+  <p><em>ניהול פרופיל - אבטחה. <strong>פונקציונליות:</strong> ניהול הגדרות האבטחה של החשבון, הכולל תמיכה מלאה באימות דו-שלבי (MFA) באמצעות אפליקציות Authenticator (כגון Microsoft Authenticator או Google Authenticator), שינוי סיסמה וניהול התחברות עם Google.</em></p>
 
   <br><br>
 
@@ -395,6 +395,11 @@ vercel dev
   
   <img src="screenshots/stripe-checkout.png" alt="תשלום עם Stripe" width="800" />
   <p><em>סליקת תשלומים. <strong>פונקציונליות:</strong> אינטגרציה מלאה ומאובטחת למערכת Stripe Checkout המאפשרת למשתמש להזין פרטי אשראי ולשלם בבטחה ובקלות על המנוי שבחר.</em></p>
+
+  <br><br>
+  
+  <img src="screenshots/manage-subscription.png" alt="ניהול מנוי" width="800" />
+  <p><em>ניהול מנוי שוטף. <strong>פונקציונליות:</strong> פורטל ניהול אישי בו המשתמש יכול לצפות בסטטוס המנוי הפעיל שלו (למשל AI Ultimate), לראות את תאריך וסכום החיוב הבא, ולנהל או לבטל את המנוי באופן עצמאי.</em></p>
 </div>
 
 <div align="right" dir="rtl">

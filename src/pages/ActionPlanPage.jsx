@@ -512,19 +512,37 @@ export default function ActionPlanPage() {
                   const element = document.getElementById('pdf-content-container');
                   if (!element) return;
                   
-                  // Dynamically import html2pdf
-                  const html2pdf = (await import('html2pdf.js')).default;
+                  // Dynamically import html-to-image and jsPDF
+                  const htmlToImage = await import('html-to-image');
+                  const { jsPDF } = await import('jspdf');
                   
-                  const opt = {
-                    margin:       [10, 10, 10, 10],
-                    filename:     'OptiLife-Plan.pdf',
-                    image:        { type: 'jpeg', quality: 0.98 },
-                    html2canvas:  { scale: 2, useCORS: true, logging: false },
-                    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-                  };
+                  const dataUrl = await htmlToImage.toPng(element, { quality: 0.95, pixelRatio: 2 });
                   
-                  // Generate PDF as Blob
-                  const pdfBlob = await html2pdf().set(opt).from(element).outputPdf('blob');
+                  const pdf = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'mm',
+                    format: 'a4'
+                  });
+                  
+                  const pdfWidth = pdf.internal.pageSize.getWidth();
+                  const pdfHeight = pdf.internal.pageSize.getHeight();
+                  const imgProps = pdf.getImageProperties(dataUrl);
+                  const imgHeightInMm = (imgProps.height * pdfWidth) / imgProps.width;
+                  
+                  let position = 0;
+                  let heightLeft = imgHeightInMm;
+                  
+                  pdf.addImage(dataUrl, 'PNG', 0, position, pdfWidth, imgHeightInMm);
+                  heightLeft -= pdfHeight;
+                  
+                  while (heightLeft > 0) {
+                    position -= pdfHeight;
+                    pdf.addPage();
+                    pdf.addImage(dataUrl, 'PNG', 0, position, pdfWidth, imgHeightInMm);
+                    heightLeft -= pdfHeight;
+                  }
+                  
+                  const pdfBlob = pdf.output('blob');
                   const file = new File([pdfBlob], "OptiLife-Plan.pdf", { type: "application/pdf" });
                   
                   setIsGeneratingPdf(false);
@@ -547,12 +565,12 @@ export default function ActionPlanPage() {
                     a.click();
                     document.body.removeChild(a);
                     URL.revokeObjectURL(url);
-                    addNotification('הקובץ הורד בהצלחה (השיתוף אינו נתמך בדפדפן זה)', 'success');
+                    addNotification({ type: 'success', title: 'הצלחה', message: 'הקובץ הורד בהצלחה (השיתוף אינו נתמך בדפדפן זה)' });
                   }
                 } catch (e) {
                   console.error('Error sharing PDF', e);
                   setIsGeneratingPdf(false);
-                  addNotification('אירעה שגיאה ביצירת ה-PDF לשיתוף', 'error');
+                  addNotification({ type: 'error', title: 'שגיאה', message: 'אירעה שגיאה ביצירת ה-PDF לשיתוף' });
                 }
               }}
               className="flex items-center gap-1.5 text-emerald-600 hover:text-emerald-700 border border-emerald-200 hover:border-emerald-300 bg-emerald-50 hover:bg-emerald-100 font-semibold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer"

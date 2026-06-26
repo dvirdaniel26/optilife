@@ -97,7 +97,7 @@ export default function Navbar({ toggleSidebar }) {
           </button>
 
           {isNotifOpen && (
-            <div className="absolute left-0 mt-3 w-80 sm:w-96 bg-white/95 backdrop-blur-md rounded-2xl custom-shadow border border-slate-100 z-50 overflow-hidden text-right animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="fixed top-[72px] left-4 right-4 w-auto sm:absolute sm:top-auto sm:left-0 sm:right-auto sm:mt-3 sm:w-96 bg-white/95 backdrop-blur-md rounded-2xl custom-shadow border border-slate-100 z-50 overflow-hidden text-right animate-in fade-in slide-in-from-top-2 duration-200">
               {/* Header */}
               <div className="p-md border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                 <div className="flex items-center gap-xs">
@@ -132,8 +132,8 @@ export default function Navbar({ toggleSidebar }) {
                 ) : (
                   notifications.map((notif) => {
                     const isUnread = !notif.is_read;
-                    let typeStyles = '';
-                    let iconName = '';
+                    let typeStyles;
+                    let iconName;
 
                     switch (notif.type) {
                       case 'welcome':
@@ -265,7 +265,7 @@ export default function Navbar({ toggleSidebar }) {
           </button>
 
           {isProfileOpen && (
-            <div className="absolute left-0 mt-3 w-56 bg-white/95 backdrop-blur-md rounded-2xl custom-shadow border border-slate-100 z-50 overflow-hidden text-right animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="fixed top-[72px] left-4 right-4 w-auto sm:absolute sm:top-auto sm:left-0 sm:right-auto sm:mt-3 sm:w-56 bg-white/95 backdrop-blur-md rounded-2xl custom-shadow border border-slate-100 z-50 overflow-hidden text-right animate-in fade-in slide-in-from-top-2 duration-200">
               <div className="p-md border-b border-slate-50 flex flex-col gap-0.5 sm:hidden bg-slate-50/30">
                 <p className="text-sm font-bold text-primary">{fullName}</p>
                 <p className={`text-[10px] font-extrabold uppercase tracking-wider ${profile?.subscription_tier && profile.subscription_tier !== 'free' ? 'text-secondary' : 'text-on-surface-variant'}`}>

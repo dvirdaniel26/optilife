@@ -541,8 +541,9 @@ export default function ActionPlanPage() {
                       <span className="material-symbols-outlined text-2xl">{idx === 0 ? 'star' : 'assignment'}</span>
                     </div>
                     <div>
-                      <h3 className={`font-bold text-lg mb-0.5 ${idx === 0 ? 'text-secondary' : 'text-primary group-hover:text-secondary'}`}>
-                        {p.testName} {idx === 0 && <span className="text-xs bg-secondary text-white px-2 py-0.5 rounded-full mr-2 align-middle font-normal">העדכנית ביותר</span>}
+                      <h3 className={`font-bold text-lg mb-0.5 flex flex-wrap items-center gap-2 ${idx === 0 ? 'text-secondary' : 'text-primary group-hover:text-secondary'}`}>
+                        <span>{p.testName}</span>
+                        {idx === 0 && <span className="text-xs bg-secondary text-white px-2 py-0.5 rounded-full font-normal whitespace-nowrap">העדכנית ביותר</span>}
                       </h3>
                       <p className="text-sm text-on-surface-variant flex items-center gap-1.5 font-medium">
                         <span className="material-symbols-outlined text-sm">calendar_today</span>

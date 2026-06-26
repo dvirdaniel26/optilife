@@ -234,18 +234,18 @@ erDiagram
 כדי להריץ את הפרויקט על המחשב שלך:
 
 <ol>
-  <li><strong>שכפול הפרויקט:</strong></li>
+  <li><strong>שכפול הפרויקט (Clone):</strong></li>
 </ol>
 </div>
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/dvirdaniel26/optilife.git
 cd optilife
 ```
 
 <div align="right" dir="rtl">
 <ol start="2">
-  <li><strong>התקנת תלויות:</strong></li>
+  <li><strong>התקנת תלויות (Dependencies):</strong></li>
 </ol>
 </div>
 
@@ -255,8 +255,8 @@ npm install
 
 <div align="right" dir="rtl">
 <ol start="3">
-  <li><strong>הגדרת קובץ משתני סביבה:</strong><br>
-  צור קובץ בשם `.env` בתיקיית השורש והזן את המשתנים הבאים:</li>
+  <li><strong>הגדרת משתני סביבה (Environment Variables):</strong><br>
+  מטעמי אבטחה, מפתחות ה-API אינם חשופים ב-GitHub. יש ליצור קובץ <code>.env</code> בתיקיית השורש (ניתן לפנות אליי לקבלת המפתחות המקוריים, או להזין משלכם):</li>
 </ol>
 </div>
 
@@ -268,21 +268,19 @@ VITE_GEMINI_API_KEY=your_gemini_api_key
 
 <div align="right" dir="rtl">
 <ol start="4">
-  <li><strong>הרצה מקומית (שרת פיתוח):</strong></li>
+  <li><strong>הרצה מקומית מלאה (כולל צד שרת):</strong><br>
+  היות והפרויקט מאובטח ומשתמש ב-Serverless Functions של Vercel (עבור ה-AI), הרצת הפיתוח מתבצעת דרך ה-CLI של Vercel (אשר מריץ גם את ה-React וגם את שרת ה-API המקומי):</li>
 </ol>
 </div>
 
 ```bash
-npm run dev
+npm i -g vercel
+vercel dev
 ```
 
 <div align="right" dir="rtl">
-<p><em>הערה: לפיתוח מקומי מאובטח עם ה-Serverless Functions של Vercel, מומלץ להריץ באמצעות ה-Vercel CLI:</em></p>
+<p><em>האתר יעלה אוטומטית בדפדפן בכתובת <code>http://localhost:3000</code>.</em></p>
 </div>
-
-```bash
-vercel dev
-```
 
 <div align="right" dir="rtl">
 

@@ -382,6 +382,11 @@ vercel dev
   <p><em>ניהול פרופיל - אבטחה. <strong>פונקציונליות:</strong> ניהול הגדרות האבטחה של החשבון, הכולל תמיכה מלאה באימות דו-שלבי (MFA) באמצעות אפליקציות Authenticator (כגון Microsoft Authenticator או Google Authenticator), שינוי סיסמה וניהול התחברות עם Google.</em></p>
 
   <br><br>
+  
+  <img src="screenshots/mfa-setup.png" alt="הגדרת אימות דו-שלבי" width="800" />
+  <p><em>הגדרת אימות דו-שלבי (MFA). <strong>פונקציונליות:</strong> תהליך חיבור מאובטח של החשבון באמצעות סריקת קוד QR לאפליקציית Authenticator (כגון Microsoft Authenticator), המספק שכבת הגנה מתקדמת לנתונים הרפואיים של המשתמש.</em></p>
+
+  <br><br>
 
   <img src="screenshots/ai-coach-locked.png" alt="מאמן AI אישי - פרימיום" width="800" />
   <p><em>מסך נעול (Upsell). <strong>פונקציונליות:</strong> מסך שמטרתו להציג למשתמשים חינמיים את הערך של מסלול ה-AI המתקדם ומניע אותם בצורה שיווקית לשדרג את החשבון כדי לקבל גישה למאמן אישי 24/7.</em></p>
